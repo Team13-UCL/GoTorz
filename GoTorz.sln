@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35825.156 d17.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GoTorz", "GoTorz\GoTorz.csproj", "{FCEEE96D-E7E4-4CFA-9E0C-71F44B31E6C7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FCEEE96D-E7E4-4CFA-9E0C-71F44B31E6C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FCEEE96D-E7E4-4CFA-9E0C-71F44B31E6C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FCEEE96D-E7E4-4CFA-9E0C-71F44B31E6C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FCEEE96D-E7E4-4CFA-9E0C-71F44B31E6C7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3D742243-9867-4180-97DD-0F020DBAE1F6}
+	EndGlobalSection
+EndGlobal
