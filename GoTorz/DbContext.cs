@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using GoTorz.Models;
+using GoTorz.Model;
 namespace GoTorz
 {
     
