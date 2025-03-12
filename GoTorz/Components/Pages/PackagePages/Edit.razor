@@ -1,0 +1,94 @@
+﻿@page "/packages/edit"
+@using Microsoft.EntityFrameworkCore
+@using GoTorz.Model
+@inject IDbContextFactory<GoTorz.Data.GoTorzContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit</PageTitle>
+
+<h1>Edit</h1>
+
+<h2>Package</h2>
+<hr />
+@if (Package is null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <div class="row">
+        <div class="col-md-4">
+            <EditForm method="post" Model="Package" OnValidSubmit="UpdatePackage" FormName="edit" Enhance>
+                <DataAnnotationsValidator />
+                <ValidationSummary role="alert"/>
+                <input type="hidden" name="Package.PackageId" value="@Package.PackageId" />
+                <div class="mb-3">
+                    <label for="planeid" class="form-label">PlaneId:</label>
+                    <InputNumber id="planeid" @bind-Value="Package.PlaneId" class="form-control" />
+                    <ValidationMessage For="() => Package.PlaneId" class="text-danger" />
+                </div>
+                <div class="mb-3">
+                    <label for="hotelid" class="form-label">HotelId:</label>
+                    <InputNumber id="hotelid" @bind-Value="Package.HotelId" class="form-control" />
+                    <ValidationMessage For="() => Package.HotelId" class="text-danger" />
+                </div>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </EditForm>
+        </div>
+    </div>
+}
+
+<div>
+    <a href="/packages">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private int PackageId { get; set; }
+
+    [SupplyParameterFromForm]
+    private Package? Package { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Package ??= await context.Package.FirstOrDefaultAsync(m => m.PackageId == PackageId);
+
+        if (Package is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    // To protect from overposting attacks, enable the specific properties you want to bind to.
+    // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task UpdatePackage()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Attach(Package!).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!PackageExists(Package!.PackageId))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/packages");
+    }
+
+    private bool PackageExists(int packageid)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Package.Any(e => e.PackageId == packageid);
+    }
+}

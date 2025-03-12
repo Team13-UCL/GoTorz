@@ -1,0 +1,49 @@
+﻿@page "/packages/create"
+@using Microsoft.EntityFrameworkCore
+@using GoTorz.Model
+@inject IDbContextFactory<GoTorz.Data.GoTorzContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create</PageTitle>
+
+<h1>Create</h1>
+
+<h2>Package</h2>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <EditForm method="post" Model="Package" OnValidSubmit="AddPackage" FormName="create" Enhance>
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert"/>
+            <div class="mb-3">
+                <label for="planeid" class="form-label">PlaneId:</label> 
+                <InputNumber id="planeid" @bind-Value="Package.PlaneId" class="form-control" /> 
+                <ValidationMessage For="() => Package.PlaneId" class="text-danger" /> 
+            </div>        
+            <div class="mb-3">
+                <label for="hotelid" class="form-label">HotelId:</label> 
+                <InputNumber id="hotelid" @bind-Value="Package.HotelId" class="form-control" /> 
+                <ValidationMessage For="() => Package.HotelId" class="text-danger" /> 
+            </div>        
+            <button type="submit" class="btn btn-primary">Create</button>
+        </EditForm>
+    </div>
+</div>
+
+<div>
+    <a href="/packages">Back to List</a>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private Package Package { get; set; } = new();
+
+    // To protect from overposting attacks, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
+    private async Task AddPackage()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Package.Add(Package);
+        await context.SaveChangesAsync();
+        NavigationManager.NavigateTo("/packages");
+    }
+}
