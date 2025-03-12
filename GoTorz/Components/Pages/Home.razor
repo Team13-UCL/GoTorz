@@ -1,7 +1,8 @@
 ﻿@page "/"
-@using Microsoft.EntityFrameworkCore
 @using GoTorz.Model
-@inject ApplicationDbContext DbContext
+@using GoTorz.Services
+@using Microsoft.EntityFrameworkCore
+@inject PackageService PackageService
 
 <PageTitle>Home</PageTitle>
 
@@ -21,6 +22,6 @@ Welcome to your new app.
 
     protected override async Task OnInitializedAsync()
     {
-        packages = await DbContext.Package.ToListAsync();
+        packages = await PackageService.GetPackagesAsync();
     }
 }

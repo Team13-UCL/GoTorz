@@ -1,5 +1,5 @@
-using GoTorz;
 using GoTorz.Components;
+using GoTorz.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -8,9 +8,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Register the DbContext with a connection string
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Register the PackageService with the connection string
+builder.Services.AddSingleton(new PackageService(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+
 
 
 var app = builder.Build();
