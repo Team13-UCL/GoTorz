@@ -1,49 +1,80 @@
 ﻿@inject HttpClient Http
 @inject ILogger<SalesPage> Logger
-@rendermode InteractiveServer
-
-
 @page "/SalesPage"
 @inject AmadeusAuthService AmadeusService
+@using System.Text.Json.Serialization;
+@using System.Text.Json
+@rendermode InteractiveServer
 
 <h3>Search Flights</h3>
 
-
-
-
-<div>
-    <label>Origin Airport Code:</label>
-    <input @bind="Origin" placeholder="e.g. JFK" />
-
-    <label>Destination Airport Code:</label>
-    <input @bind="Destination" placeholder="e.g. LAX" />
-
-    <label>Departure Date:</label>
-    <input type="date" @bind="DepartureDate" />
-
-    <button @onclick="FetchFlights">Search Flights</button>
-</div>
-
-@if (IsLoading)
+@if (string.IsNullOrEmpty(AccessToken))
 {
-    <p>Loading...</p>
+    <p>Fetching access token...</p>
 }
-else if (!string.IsNullOrEmpty(FlightResults))
+else
 {
-    <h4>Flight Results:</h4>
-    <pre>@FlightResults</pre>
-}
-else if (!string.IsNullOrEmpty(ErrorMessage))
-{
-    <p style="color: red;">@ErrorMessage</p>
-}
+    <div>
+        <label>Origin Airport Code:</label>
+        <input @bind="Origin" placeholder="e.g. JFK" />
 
+        <label>Destination Airport Code:</label>
+        <input @bind="Destination" placeholder="e.g. LAX" />
+
+        <label>Departure Date:</label>
+        <input type="date" @bind="DepartureDate" />
+
+        <button @onclick="FetchFlights">Search Flights</button>
+    </div>
+
+    @if (IsLoading)
+    {
+        <p>Loading...</p>
+    }
+    else if (FlightResults != null && FlightResults.Count > 0)
+    {
+        <h4>Flight Results:</h4>
+        <table>
+            <thead>
+                <tr>
+                    <th>Flight ID</th>
+                    <th>Departure</th>
+                    <th>Arrival</th>
+                    <th>Carrier</th>
+                    <th>Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var flight in FlightResults)
+                {
+                    @foreach (var itinerary in flight.Itineraries)
+                    {
+                        @foreach (var segment in itinerary.Segments)
+                        {
+                            <tr>
+                                <td>@flight.Id</td>
+                                <td>@segment.Departure.IataCode @segment.Departure.At</td>
+                                <td>@segment.Arrival.IataCode @segment.Arrival.At</td>
+                                <td>@segment.CarrierCode @segment.FlightNumber</td>
+                                <td>@flight.Price.Currency @flight.Price.Total</td>
+                            </tr>
+                        }
+                    }
+                }
+            </tbody>
+        </table>
+    }
+    else if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <p style="color: red;">@ErrorMessage</p>
+    }
+}
 
 @code {
     private string Origin = "";
     private string Destination = "";
     private DateTime? DepartureDate = null;
-    private string FlightResults = "";
+    private List<Flight> FlightResults = new();
     private string ErrorMessage = "";
     private bool IsLoading = false;
     private string AccessToken = "";
@@ -51,33 +82,95 @@ else if (!string.IsNullOrEmpty(ErrorMessage))
     // Fetch the Access Token when the page loads
     protected override async Task OnInitializedAsync()
     {
-
         AccessToken = await AmadeusService.GetAccessTokenAsync();
-
-
     }
 
     private async Task FetchFlights()
     {
-
-
         IsLoading = true;
         ErrorMessage = "";
-        FlightResults = "";
+        FlightResults.Clear();
+        Logger.LogInformation("klikket");
 
         try
         {
-            FlightResults = await AmadeusService.SearchFlightsAsync(Origin, Destination, DepartureDate?.ToString("yyyy-MM-dd"));
-            Logger.LogInformation(FlightResults);
+            if (DepartureDate.HasValue)
+            {
+                string departureDateString = DepartureDate.Value.ToString("yyyy-MM-dd");
+                var response = await AmadeusService.SearchFlightsAsync(Origin, Destination, departureDateString);
+                Logger.LogInformation("JSON Response: {response}", response); // Log the JSON response
+
+                var jsonDocument = JsonDocument.Parse(response);
+                var flightData = jsonDocument.RootElement.GetProperty("data").GetRawText();
+                FlightResults = JsonSerializer.Deserialize<List<Flight>>(flightData);
+
+                Logger.LogInformation("Flights fetched successfully.");
+            }
+            else
+            {
+                ErrorMessage = "Please select a valid departure date.";
+            }
         }
         catch (Exception ex)
         {
             ErrorMessage = $"Error: {ex.Message}";
-            Logger.LogInformation(ErrorMessage);
+            Logger.LogError(ex, "Error fetching flights.");
         }
         finally
         {
             IsLoading = false;
         }
     }
+
+    public class Flight
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
+
+        [JsonPropertyName("itineraries")]
+        public List<Itinerary> Itineraries { get; set; }
+
+        [JsonPropertyName("price")]
+        public Price Price { get; set; }
+    }
+
+    public class Itinerary
+    {
+        [JsonPropertyName("segments")]
+        public List<Segment> Segments { get; set; }
+    }
+
+    public class Segment
+    {
+        [JsonPropertyName("departure")]
+        public DepartureArrival Departure { get; set; }
+
+        [JsonPropertyName("arrival")]
+        public DepartureArrival Arrival { get; set; }
+
+        [JsonPropertyName("carrierCode")]
+        public string CarrierCode { get; set; }
+
+        [JsonPropertyName("number")]
+        public string FlightNumber { get; set; }
+    }
+
+    public class DepartureArrival
+    {
+        [JsonPropertyName("iataCode")]
+        public string IataCode { get; set; }
+
+        [JsonPropertyName("at")]
+        public DateTime At { get; set; }
+    }
+
+    public class Price
+    {
+        [JsonPropertyName("currency")]
+        public string Currency { get; set; }
+
+        [JsonPropertyName("total")]
+        public string Total { get; set; }
+    }
+
 }
