@@ -1,0 +1,83 @@
+﻿@inject HttpClient Http
+@inject ILogger<SalesPage> Logger
+@rendermode InteractiveServer
+
+
+@page "/SalesPage"
+@inject AmadeusAuthService AmadeusService
+
+<h3>Search Flights</h3>
+
+
+
+
+<div>
+    <label>Origin Airport Code:</label>
+    <input @bind="Origin" placeholder="e.g. JFK" />
+
+    <label>Destination Airport Code:</label>
+    <input @bind="Destination" placeholder="e.g. LAX" />
+
+    <label>Departure Date:</label>
+    <input type="date" @bind="DepartureDate" />
+
+    <button @onclick="FetchFlights">Search Flights</button>
+</div>
+
+@if (IsLoading)
+{
+    <p>Loading...</p>
+}
+else if (!string.IsNullOrEmpty(FlightResults))
+{
+    <h4>Flight Results:</h4>
+    <pre>@FlightResults</pre>
+}
+else if (!string.IsNullOrEmpty(ErrorMessage))
+{
+    <p style="color: red;">@ErrorMessage</p>
+}
+
+
+@code {
+    private string Origin = "";
+    private string Destination = "";
+    private DateTime? DepartureDate = null;
+    private string FlightResults = "";
+    private string ErrorMessage = "";
+    private bool IsLoading = false;
+    private string AccessToken = "";
+
+    // Fetch the Access Token when the page loads
+    protected override async Task OnInitializedAsync()
+    {
+
+        AccessToken = await AmadeusService.GetAccessTokenAsync();
+
+
+    }
+
+    private async Task FetchFlights()
+    {
+
+
+        IsLoading = true;
+        ErrorMessage = "";
+        FlightResults = "";
+
+        try
+        {
+            FlightResults = await AmadeusService.SearchFlightsAsync(Origin, Destination, DepartureDate?.ToString("yyyy-MM-dd"));
+            Logger.LogInformation(FlightResults);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error: {ex.Message}";
+            Logger.LogInformation(ErrorMessage);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+}

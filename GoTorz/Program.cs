@@ -7,6 +7,11 @@ using GoTorz.Data;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContextFactory<GoTorzContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("GoTorzContext") ?? throw new InvalidOperationException("Connection string 'GoTorzContext' not found.")));
+builder.Services.AddHttpClient();
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://test.api.amadeus.com/") });
+
+builder.Services.AddScoped<AmadeusAuthService>();
+builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 
 builder.Services.AddQuickGridEntityFrameworkAdapter();
 
