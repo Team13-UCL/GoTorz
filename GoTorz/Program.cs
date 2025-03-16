@@ -21,6 +21,12 @@ builder.Host.UseSerilog();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Register HttpClient
+builder.Services.AddHttpClient();
+
+// Register AmadeusAuthService
+builder.Services.AddSingleton<AmadeusAuthService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -40,3 +46,5 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+
+
