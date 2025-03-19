@@ -1,0 +1,216 @@
+﻿@inject HttpClient Http
+@inject ILogger<SalesHotelPage> Logger
+@page "/SalesHotelPage"
+@inject AmadeusAuthService AmadeusService
+@using System.Text.Json.Serialization;
+@using System.Text.Json
+@rendermode InteractiveServer
+
+<h3>Search Hotels</h3>
+
+@if (string.IsNullOrEmpty(AccessToken))
+{
+    <p>Fetching access token...</p>
+}
+else
+{
+    <div class="search-form">
+        <div class="form-group">
+            <label>City Code:</label>
+            <input @bind="CityCode" placeholder="e.g. NYC" class="form-control" />
+        </div>
+
+        <div class="form-group">
+            <label>Check-in Date:</label>
+            <input type="date" @bind="CheckInDate" class="form-control" />
+        </div>
+
+        <div class="form-group">
+            <label>Check-out Date:</label>
+            <input type="date" @bind="CheckOutDate" class="form-control" />
+        </div>
+
+        <button @onclick="FetchHotels" class="btn btn-primary">Search Hotels</button>
+    </div>
+
+    @if (IsLoading)
+    {
+        <p>Loading...</p>
+    }
+    else if (HotelResults != null && HotelResults.Count > 0)
+    {
+        <h4>Hotel Results:</h4>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Hotel Name</th>
+                    <th>City Code</th>
+                    <th>Country</th>
+                    <th>Latitude</th>
+                    <th>Longitude</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var hotel in HotelResults)
+                {
+                    <tr>
+                        <td>@hotel.Name</td>
+                        <td>@hotel.IataCode</td>
+                        <td>@hotel.Address?.CountryCode</td>
+                        <td>@hotel.GeoCode?.Latitude</td>
+                        <td>@hotel.GeoCode?.Longitude</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <p style="color: red;">@ErrorMessage</p>
+    }
+}
+
+<style>
+    .search-form {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        background-color: #f9f9f9;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }
+
+    .btn {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        border: none;
+        border-radius: 5px;
+        background-color: #007bff;
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+        .btn:hover {
+            background-color: #0056b3;
+        }
+
+    .table {
+        width: 100%;
+        margin-top: 20px;
+        border-collapse: collapse;
+    }
+
+        .table th, .table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .table th {
+            background-color: #f2f2f2;
+        }
+</style>
+
+@code {
+    private string CityCode = "";
+    private DateTime? CheckInDate = null;
+    private DateTime? CheckOutDate = null;
+    private List<Hotel> HotelResults = new();
+    private string ErrorMessage = "";
+    private bool IsLoading = false;
+    private string AccessToken = "";
+
+    // Fetch the Access Token when the page loads
+    protected override async Task OnInitializedAsync()
+    {
+        AccessToken = await AmadeusService.GetAccessTokenAsync();
+    }
+
+    private async Task FetchHotels()
+    {
+        IsLoading = true;
+        ErrorMessage = "";
+        HotelResults.Clear();
+        Logger.LogInformation("Hotel search initiated");
+
+        try
+        {
+            if (CheckInDate.HasValue && CheckOutDate.HasValue)
+            {
+                string checkInDateString = CheckInDate.Value.ToString("yyyy-MM-dd");
+                string checkOutDateString = CheckOutDate.Value.ToString("yyyy-MM-dd");
+                var response = await AmadeusService.SearchHotelsAsync(CityCode);
+                Logger.LogInformation("JSON Response: {response}", response);
+
+                var hotelResponse = JsonSerializer.Deserialize<HotelResponse>(response);
+                HotelResults = hotelResponse?.Data ?? new List<Hotel>();
+
+                Logger.LogInformation("Hotels fetched successfully.");
+            }
+            else
+            {
+                ErrorMessage = "Please select valid check-in and check-out dates.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error: {ex.Message}";
+            Logger.LogError(ex, "Error fetching hotels.");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    public class HotelResponse
+    {
+        [JsonPropertyName("data")]
+        public List<Hotel> Data { get; set; }
+    }
+
+    public class Hotel
+    {
+        [JsonPropertyName("hotelId")]
+        public string Id { get; set; }
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
+
+        [JsonPropertyName("iataCode")]
+        public string IataCode { get; set; }
+
+        [JsonPropertyName("address")]
+        public Address Address { get; set; }
+
+        [JsonPropertyName("geoCode")]
+        public GeoCode GeoCode { get; set; }
+    }
+
+    public class Address
+    {
+        [JsonPropertyName("countryCode")]
+        public string CountryCode { get; set; }
+    }
+
+    public class GeoCode
+    {
+        [JsonPropertyName("latitude")]
+        public double Latitude { get; set; }
+
+        [JsonPropertyName("longitude")]
+        public double Longitude { get; set; }
+    }
+}

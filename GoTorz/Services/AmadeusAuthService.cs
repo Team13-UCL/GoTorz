@@ -7,6 +7,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Net.Http.Headers;
 
+
+
 public class AmadeusAuthService
 {
     private readonly HttpClient _httpClient;
@@ -71,7 +73,28 @@ public class AmadeusAuthService
             throw new HttpRequestException($"Failed to fetch flights: {response.ReasonPhrase}");
         }
     }
+    public async Task<string> SearchHotelsAsync(string cityCode)
+    {
+        string accessToken = await GetAccessTokenAsync();
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        string apiUrl = $"https://test.api.amadeus.com/v1/reference-data/locations/hotels/by-city?cityCode={cityCode}";
+
+        var response = await _httpClient.GetAsync(apiUrl);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return await response.Content.ReadAsStringAsync();
+        }
+        else
+        {
+            throw new HttpRequestException($"Failed to fetch hotels: {response.ReasonPhrase}");
+        }
+    }
+
 }
+
+
 
 public class AmadeusTokenResponse
 {
