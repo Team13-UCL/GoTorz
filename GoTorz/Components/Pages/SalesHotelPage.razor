@@ -30,14 +30,19 @@ else
             <input type="date" @bind="CheckOutDate" class="form-control" />
         </div>
 
-        <button @onclick="FetchHotels" class="btn btn-primary">Search Hotels</button>
+        <div class="form-group">
+            <label>Adults:</label>
+            <input type="number" @bind="Adults" min="1" max="9" class="form-control" />
+        </div>
+
+        <button @onclick="FetchHotelsWithPricing" class="btn btn-primary">Search Hotels</button>
     </div>
 
     @if (IsLoading)
     {
         <p>Loading...</p>
     }
-    else if (HotelResults != null && HotelResults.Count > 0)
+    else if (HotelOffers != null && HotelOffers.Count > 0)
     {
         <h4>Hotel Results:</h4>
         <table class="table table-striped">
@@ -45,20 +50,29 @@ else
                 <tr>
                     <th>Hotel Name</th>
                     <th>City Code</th>
-                    <th>Country</th>
-                    <th>Latitude</th>
-                    <th>Longitude</th>
+                    <th>Price</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var hotel in HotelResults)
+                @foreach (var hotelOffer in HotelOffers)
                 {
                     <tr>
-                        <td>@hotel.Name</td>
-                        <td>@hotel.IataCode</td>
-                        <td>@hotel.Address?.CountryCode</td>
-                        <td>@hotel.GeoCode?.Latitude</td>
-                        <td>@hotel.GeoCode?.Longitude</td>
+                        <td>@hotelOffer.Hotel.Name</td>
+                        <td>@hotelOffer.Hotel.CityCode</td>
+                        <td>
+                            @if (hotelOffer.Offers != null && hotelOffer.Offers.Count > 0)
+                            {
+                                @($"{hotelOffer.Offers[0].Price.Total} {hotelOffer.Offers[0].Price.Currency}")
+                            }
+                            else
+                            {
+                                <span>No price available</span>
+                            }
+                        </td>
+                        <td>
+                            <button @onclick="() => SelectHotelOffer(hotelOffer)" class="btn btn-sm btn-info">Select</button>
+                        </td>
                     </tr>
                 }
             </tbody>
@@ -67,6 +81,63 @@ else
     else if (!string.IsNullOrEmpty(ErrorMessage))
     {
         <p style="color: red;">@ErrorMessage</p>
+    }
+
+    @if (SelectedHotel != null)
+    {
+        <div class="selected-offer">
+            <h4>Selected Hotel</h4>
+            <div class="card">
+                <div class="card-header">
+                    <h5>@SelectedHotel.Hotel.Name</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Dates:</strong> @CheckInDate?.ToString("yyyy-MM-dd") to @CheckOutDate?.ToString("yyyy-MM-dd")</p>
+                    <p><strong>Room Options:</strong></p>
+
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Room Type</th>
+                                <th>Price</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var offer in SelectedHotel.Offers)
+                            {
+                                <tr>
+                                    <td>@(offer.Room?.TypeEstimated?.Category ?? "Standard")</td>
+                                    <td>@offer.Price.Total @offer.Price.Currency</td>
+                                    <td>
+                                        <button @onclick="() => SelectRoom(offer)" class="btn btn-sm btn-success">Book</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (SelectedOffer != null)
+    {
+        <div class="booking-summary">
+            <h4>Booking Summary</h4>
+            <div class="card">
+                <div class="card-header">
+                    <h5>@SelectedHotel.Hotel.Name</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Dates:</strong> @CheckInDate?.ToString("yyyy-MM-dd") to @CheckOutDate?.ToString("yyyy-MM-dd")</p>
+                    <p><strong>Room Type:</strong> @(SelectedOffer.Room?.TypeEstimated?.Category ?? "Standard")</p>
+                    <p><strong>Price:</strong> @SelectedOffer.Price.Total @SelectedOffer.Price.Currency</p>
+                    <p><strong>Description:</strong> @(SelectedOffer.Room?.Description?.Text ?? "No description available")</p>
+                    <button class="btn btn-success">Confirm Booking</button>
+                </div>
+            </div>
+        </div>
     }
 }
 
@@ -107,6 +178,28 @@ else
             background-color: #0056b3;
         }
 
+    .btn-sm {
+        width: auto;
+        padding: 5px 10px;
+        font-size: 14px;
+    }
+
+    .btn-info {
+        background-color: #17a2b8;
+    }
+
+        .btn-info:hover {
+            background-color: #138496;
+        }
+
+    .btn-success {
+        background-color: #28a745;
+    }
+
+        .btn-success:hover {
+            background-color: #218838;
+        }
+
     .table {
         width: 100%;
         margin-top: 20px;
@@ -121,16 +214,43 @@ else
         .table th {
             background-color: #f2f2f2;
         }
+
+    .selected-offer, .booking-summary {
+        margin-top: 30px;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 10px;
+        background-color: #f9f9f9;
+    }
+
+    .card {
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        overflow: hidden;
+    }
+
+    .card-header {
+        padding: 10px 15px;
+        background-color: #007bff;
+        color: white;
+    }
+
+    .card-body {
+        padding: 15px;
+    }
 </style>
 
 @code {
     private string CityCode = "";
-    private DateTime? CheckInDate = null;
-    private DateTime? CheckOutDate = null;
-    private List<Hotel> HotelResults = new();
+    private DateTime? CheckInDate = DateTime.Today.AddDays(1);
+    private DateTime? CheckOutDate = DateTime.Today.AddDays(3);
+    private int Adults = 1;
+    private List<HotelOfferData> HotelOffers = new();
     private string ErrorMessage = "";
     private bool IsLoading = false;
     private string AccessToken = "";
+    private HotelOfferData SelectedHotel = null;
+    private Offer SelectedOffer = null;
 
     // Fetch the Access Token when the page loads
     protected override async Task OnInitializedAsync()
@@ -138,36 +258,70 @@ else
         AccessToken = await AmadeusService.GetAccessTokenAsync();
     }
 
-    private async Task FetchHotels()
+    private async Task FetchHotelsWithPricing()
     {
+        if (string.IsNullOrWhiteSpace(CityCode))
+        {
+            ErrorMessage = "Please enter a city code.";
+            return;
+        }
+
+        if (!CheckInDate.HasValue || !CheckOutDate.HasValue)
+        {
+            ErrorMessage = "Please select valid check-in and check-out dates.";
+            return;
+        }
+
+        if (CheckInDate >= CheckOutDate)
+        {
+            ErrorMessage = "Check-out date must be after check-in date.";
+            return;
+        }
+
         IsLoading = true;
         ErrorMessage = "";
-        HotelResults.Clear();
-        Logger.LogInformation("Hotel search initiated");
+        HotelOffers.Clear();
+        SelectedHotel = null;
+        SelectedOffer = null;
+
+        Logger.LogInformation("Hotel search initiated for city: {CityCode}", CityCode);
 
         try
         {
-            if (CheckInDate.HasValue && CheckOutDate.HasValue)
+            // Step 1: Get list of hotels
+            var hotelResponse = await AmadeusService.SearchHotelsAsync(CityCode);
+            var hotels = JsonSerializer.Deserialize<HotelResponse>(hotelResponse)?.Data;
+
+            if (hotels == null || hotels.Count == 0)
             {
-                string checkInDateString = CheckInDate.Value.ToString("yyyy-MM-dd");
-                string checkOutDateString = CheckOutDate.Value.ToString("yyyy-MM-dd");
-                var response = await AmadeusService.SearchHotelsAsync(CityCode);
-                Logger.LogInformation("JSON Response: {response}", response);
-
-                var hotelResponse = JsonSerializer.Deserialize<HotelResponse>(response);
-                HotelResults = hotelResponse?.Data ?? new List<Hotel>();
-
-                Logger.LogInformation("Hotels fetched successfully.");
+                ErrorMessage = "No hotels found for the specified city code.";
+                IsLoading = false;
+                return;
             }
-            else
+
+            Logger.LogInformation("{HotelCount} hotels found", hotels.Count);
+
+            // Step 2: Get pricing info for hotels (limit to 10 hotels to avoid API overload)
+            var hotelsToQuery = hotels.Take(10).ToList();
+            string hotelIds = string.Join(",", hotelsToQuery.Select(h => h.Id));
+
+            string checkInDateString = CheckInDate.Value.ToString("yyyy-MM-dd");
+            string checkOutDateString = CheckOutDate.Value.ToString("yyyy-MM-dd");
+
+            var offersResponse = await AmadeusService.SearchHotelOffersAsync(hotelIds, checkInDateString, checkOutDateString, Adults);
+            var offerData = JsonSerializer.Deserialize<HotelOfferResponse>(offersResponse)?.Data;
+
+            HotelOffers = offerData ?? new List<HotelOfferData>();
+
+            if (HotelOffers.Count == 0)
             {
-                ErrorMessage = "Please select valid check-in and check-out dates.";
+                ErrorMessage = "No offers available for the selected dates.";
             }
         }
         catch (Exception ex)
         {
             ErrorMessage = $"Error: {ex.Message}";
-            Logger.LogError(ex, "Error fetching hotels.");
+            Logger.LogError(ex, "Error fetching hotels for {CityCode}", CityCode);
         }
         finally
         {
@@ -175,6 +329,18 @@ else
         }
     }
 
+    private void SelectHotelOffer(HotelOfferData hotel)
+    {
+        SelectedHotel = hotel;
+        SelectedOffer = null;
+    }
+
+    private void SelectRoom(Offer offer)
+    {
+        SelectedOffer = offer;
+    }
+
+    // Model classes
     public class HotelResponse
     {
         [JsonPropertyName("data")]
@@ -194,9 +360,6 @@ else
 
         [JsonPropertyName("address")]
         public Address Address { get; set; }
-
-        [JsonPropertyName("geoCode")]
-        public GeoCode GeoCode { get; set; }
     }
 
     public class Address
@@ -205,12 +368,139 @@ else
         public string CountryCode { get; set; }
     }
 
-    public class GeoCode
+    // Hotel Offers Models
+    public class HotelOfferResponse
     {
-        [JsonPropertyName("latitude")]
-        public double Latitude { get; set; }
+        [JsonPropertyName("data")]
+        public List<HotelOfferData> Data { get; set; }
+    }
 
-        [JsonPropertyName("longitude")]
-        public double Longitude { get; set; }
+    public class HotelOfferData
+    {
+        [JsonPropertyName("type")]
+        public string Type { get; set; }
+
+        [JsonPropertyName("hotel")]
+        public HotelInfo Hotel { get; set; }
+
+        [JsonPropertyName("available")]
+        public bool Available { get; set; }
+
+        [JsonPropertyName("offers")]
+        public List<Offer> Offers { get; set; }
+    }
+
+    public class HotelInfo
+    {
+        [JsonPropertyName("type")]
+        public string Type { get; set; }
+
+        [JsonPropertyName("hotelId")]
+        public string HotelId { get; set; }
+
+        [JsonPropertyName("chainCode")]
+        public string ChainCode { get; set; }
+
+        [JsonPropertyName("name")]
+        public string Name { get; set; }
+
+        [JsonPropertyName("cityCode")]
+        public string CityCode { get; set; }
+
+        [JsonPropertyName("address")]
+        public HotelAddress Address { get; set; }
+    }
+
+    public class HotelAddress
+    {
+        [JsonPropertyName("countryCode")]
+        public string CountryCode { get; set; }
+    }
+
+    public class Offer
+    {
+        [JsonPropertyName("id")]
+        public string Id { get; set; }
+
+        [JsonPropertyName("checkInDate")]
+        public string CheckInDate { get; set; }
+
+        [JsonPropertyName("checkOutDate")]
+        public string CheckOutDate { get; set; }
+
+        [JsonPropertyName("rateCode")]
+        public string RateCode { get; set; }
+
+        [JsonPropertyName("room")]
+        public Room Room { get; set; }
+
+        [JsonPropertyName("guests")]
+        public Guests Guests { get; set; }
+
+        [JsonPropertyName("price")]
+        public Price Price { get; set; }
+    }
+
+    public class Room
+    {
+        [JsonPropertyName("type")]
+        public string Type { get; set; }
+
+        [JsonPropertyName("typeEstimated")]
+        public TypeEstimated TypeEstimated { get; set; }
+
+        [JsonPropertyName("description")]
+        public Description Description { get; set; }
+    }
+
+    public class TypeEstimated
+    {
+        [JsonPropertyName("category")]
+        public string Category { get; set; }
+
+        [JsonPropertyName("beds")]
+        public int? Beds { get; set; }
+
+        [JsonPropertyName("bedType")]
+        public string BedType { get; set; }
+    }
+
+    public class Description
+    {
+        [JsonPropertyName("text")]
+        public string Text { get; set; }
+    }
+
+    public class Guests
+    {
+        [JsonPropertyName("adults")]
+        public int Adults { get; set; }
+    }
+
+    public class Price
+    {
+        [JsonPropertyName("currency")]
+        public string Currency { get; set; }
+
+        [JsonPropertyName("total")]
+        public string Total { get; set; }
+
+        [JsonPropertyName("base")]
+        public string Base { get; set; }
+
+        [JsonPropertyName("taxes")]
+        public List<Tax> Taxes { get; set; }
+    }
+
+    public class Tax
+    {
+        [JsonPropertyName("code")]
+        public string Code { get; set; }
+
+        [JsonPropertyName("amount")]
+        public string Amount { get; set; }
+
+        [JsonPropertyName("currency")]
+        public string Currency { get; set; }
     }
 }

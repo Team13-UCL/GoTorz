@@ -91,7 +91,23 @@ public class AmadeusAuthService
             throw new HttpRequestException($"Failed to fetch hotels: {response.ReasonPhrase}");
         }
     }
+    public async Task<string> SearchHotelOffersAsync(string hotelIds, string checkInDate, string checkOutDate, int adults = 1)
+    {
+        string accessToken = await GetAccessTokenAsync();
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
+        string apiUrl = $"https://test.api.amadeus.com/v3/shopping/hotel-offers?hotelIds={hotelIds}&adults={adults}&checkInDate={checkInDate}&checkOutDate={checkOutDate}";
+
+        var response = await _httpClient.GetAsync(apiUrl);
+        if (response.IsSuccessStatusCode)
+        {
+            return await response.Content.ReadAsStringAsync();
+        }
+        else
+        {
+            throw new HttpRequestException($"Failed to fetch hotel offers: {response.ReasonPhrase}");
+        }
+    }
 }
 
 
