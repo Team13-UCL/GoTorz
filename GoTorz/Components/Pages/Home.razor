@@ -19,8 +19,8 @@ Welcome to your new app.
 @code {
     private List<Package> packages = new();
 
-    protected override async Task OnInitializedAsync()
-    {
-        packages = await DbContext.Package.ToListAsync();
-    }
+    // protected override async Task OnInitializedAsync()
+    // {
+    //     packages = await DbContext.Package.ToListAsync();
+    // }
 }

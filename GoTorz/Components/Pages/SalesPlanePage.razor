@@ -4,7 +4,10 @@
 @inject AmadeusAuthService AmadeusService
 @using System.Text.Json.Serialization;
 @using System.Text.Json
+@using GoTorz.Model
 @rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject GoTorz.Data.GoTorzContext DbContext
 
 <h3>Search Flights</h3>
 
@@ -48,6 +51,7 @@ else
                     <th>Arrival</th>
                     <th>Carrier</th>
                     <th>Price</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -63,6 +67,9 @@ else
                                 <td>@segment.Arrival.IataCode @segment.Arrival.At</td>
                                 <td>@segment.CarrierCode @segment.FlightNumber</td>
                                 <td>@flight.Price.Currency @flight.Price.Total</td>
+                                <td>
+                                    <button @onclick="() => SelectPlaneOffer(segment.Departure.IataCode, segment.Arrival.IataCode, segment.CarrierCode + segment.FlightNumber, flight.Price.Total)" class="btn btn-sm btn-info">Select</button>
+                                </td>
                             </tr>
                         }
                     }
@@ -178,6 +185,43 @@ else
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    private async Task SaveFlightDetails(string departure, string arrival, string carrier, decimal price)
+    {
+        try
+        {
+            var plane = new Plane
+                {
+                    DepartureAirport = departure,
+                    ArrivalAirport = arrival,
+                    CarrierCode = carrier,
+                    Price = price
+                };
+
+            DbContext.Plane.Add(plane);
+            await DbContext.SaveChangesAsync();
+
+            Logger.LogInformation("Flight details saved successfully.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving flight details.");
+            ErrorMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private void SelectPlaneOffer(string departure, string arrival, string carrier, string price)
+    {
+        if (decimal.TryParse(price, out var parsedPrice))
+        {
+            SaveFlightDetails(departure, arrival, carrier, parsedPrice);
+            Navigation.NavigateTo("/SalesHotelPage");
+        }
+        else
+        {
+            ErrorMessage = "Invalid price format.";
         }
     }
 
