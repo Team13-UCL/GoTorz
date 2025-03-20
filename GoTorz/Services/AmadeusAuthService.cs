@@ -5,8 +5,8 @@ using System.Net.Http.Headers;
 public class AmadeusAuthService
 {
     private readonly HttpClient _httpClient;
-    private readonly string _apiKey = "dUgl3d3O8U2W0BShd0qOA5DC0kh3hsVi";
-    private readonly string _apiSecret = "IorqXCtZ0UkKykGv";
+    private readonly string _apiKey;
+    private readonly string _apiSecret;
     private readonly string _tokenUrl = "https://test.api.amadeus.com/v1/security/oauth2/token";
 
     private string _accessToken;
@@ -15,6 +15,8 @@ public class AmadeusAuthService
     public AmadeusAuthService(HttpClient httpClient)
     {
         _httpClient = httpClient;
+        _apiKey = Environment.GetEnvironmentVariable("AMADEUS_API_KEY");
+        _apiSecret = Environment.GetEnvironmentVariable("AMADEUS_API_SECRET");
     }
 
     public async Task<string> GetAccessTokenAsync()
