@@ -8,17 +8,14 @@ public class AmadeusAuthService
     private readonly string _apiKey;
     private readonly string _apiSecret;
     private readonly string _tokenUrl = "https://test.api.amadeus.com/v1/security/oauth2/token";
-
     private string _accessToken;
     private DateTime _tokenExpiration;
 
-    // test kommentar
-    // API KEY og API SECRET er fundet på github, og er blevet slettet fra koden af sikkerhedsmæssige årsager
-    public AmadeusAuthService(HttpClient httpClient)
+    public AmadeusAuthService(HttpClient httpClient, IConfiguration configuration)
     {
         _httpClient = httpClient;
-        _apiKey = Environment.GetEnvironmentVariable("AMADEUS_API_KEY");
-        _apiSecret = Environment.GetEnvironmentVariable("AMADEUS_API_SECRET");
+        _apiKey = configuration["Amadeus:ApiKey"];
+        _apiSecret = configuration["Amadeus:ApiSecret"];
     }
 
     public async Task<string> GetAccessTokenAsync()

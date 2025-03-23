@@ -25,7 +25,11 @@ builder.Services.AddRazorComponents()
 builder.Services.AddHttpClient();
 
 // Register AmadeusAuthService
-builder.Services.AddSingleton<AmadeusAuthService>();
+builder.Services.AddSingleton<AmadeusAuthService>(sp => {
+    var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
+    var configuration = sp.GetRequiredService<IConfiguration>();
+    return new AmadeusAuthService(httpClient, configuration);
+});
 
 var app = builder.Build();
 
