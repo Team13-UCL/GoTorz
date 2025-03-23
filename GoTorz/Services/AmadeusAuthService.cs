@@ -12,7 +12,7 @@ public class AmadeusAuthService
     private string _accessToken;
     private DateTime _tokenExpiration;
 
-
+    // test kommentar
     // API KEY og API SECRET er fundet på github, og er blevet slettet fra koden af sikkerhedsmæssige årsager
     public AmadeusAuthService(HttpClient httpClient)
     {
