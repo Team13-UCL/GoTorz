@@ -12,8 +12,8 @@ using System.Net.Http.Headers;
 public class AmadeusAuthService
 {
     private readonly HttpClient _httpClient;
-    private readonly string _apiKey = "EmYetVmoFewLD2DngcYFq9RakHNBNUKl";
-    private readonly string _apiSecret = "nP5QKb8W4ioDR21h";
+    private readonly string _apiKey = "k37Vg6xG7HSOiB3DR5K15xqY9gDNbKGI";
+    private readonly string _apiSecret = "Jc5RaGdki83HkRcd";
     private readonly string _tokenUrl = "https://test.api.amadeus.com/v1/security/oauth2/token";
 
     private string _accessToken;

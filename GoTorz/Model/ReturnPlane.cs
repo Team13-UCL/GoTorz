@@ -1,16 +1,13 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace GoTorz.Model
+﻿namespace GoTorz.Model
 {
-    public class Plane
+    public class ReturnPlane
     {
-        
-        public int PlaneId { get; set; }
+        public int ReturnPlaneId { get; set; }
         public string DepartureAirport { get; set; }
         public string ArrivalAirport { get; set; }
         public string CarrierCode { get; set; }
         public decimal Price { get; set; }
-
-        public DateTime StartDate { get; set; }
+        public DateTime ReturnDate { get; set; }
+        public int Duration { get; set; }
     }
 }

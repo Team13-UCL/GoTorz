@@ -4,7 +4,10 @@
 @inject AmadeusAuthService AmadeusService
 @using System.Text.Json.Serialization;
 @using System.Text.Json
+@using GoTorz.Model
 @rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject GoTorz.Data.GoTorzContext DbContext
 
 <h3>Search Hotels</h3>
 
@@ -110,7 +113,7 @@ else
                                     <td>@(offer.Room?.TypeEstimated?.Category ?? "Standard")</td>
                                     <td>@offer.Price.Total @offer.Price.Currency</td>
                                     <td>
-                                        <button @onclick="() => SelectRoom(offer)" class="btn btn-sm btn-success">Book</button>
+                                        <button @onclick="() => SelectRoom(offer, SelectedHotel.Hotel.Name, offer.Price.Total)" class="btn btn-sm btn-success">Book</button>
                                     </td>
                                 </tr>
                             }
@@ -302,11 +305,14 @@ else
             Logger.LogInformation("{HotelCount} hotels found", hotels.Count);
 
             // Step 2: Get pricing info for hotels (limit to 10 hotels to avoid API overload)
-            var hotelsToQuery = hotels.Take(10).ToList();
+            var hotelsToQuery = hotels.Take(10).ToList(); // Adjust the limit as needed
             string hotelIds = string.Join(",", hotelsToQuery.Select(h => h.Id));
 
             string checkInDateString = CheckInDate.Value.ToString("yyyy-MM-dd");
             string checkOutDateString = CheckOutDate.Value.ToString("yyyy-MM-dd");
+
+            Logger.LogInformation("Fetching offers for hotels: {HotelIds}, CheckInDate: {CheckInDate}, CheckOutDate: {CheckOutDate}, Adults: {Adults}",
+                hotelIds, checkInDateString, checkOutDateString, Adults);
 
             var offersResponse = await AmadeusService.SearchHotelOffersAsync(hotelIds, checkInDateString, checkOutDateString, Adults);
             var offerData = JsonSerializer.Deserialize<HotelOfferResponse>(offersResponse)?.Data;
@@ -335,9 +341,48 @@ else
         SelectedOffer = null;
     }
 
-    private void SelectRoom(Offer offer)
+    private void SelectRoom(Offer offer, string name, string price)
     {
-        SelectedOffer = offer;
+        if (decimal.TryParse(price, out var parsedPrice))
+        {
+            if (CheckInDate.HasValue)
+            {
+                SaveHotelDetails(name, parsedPrice, CheckInDate.Value, CheckOutDate.Value);
+                Navigation.NavigateTo("/packages");
+            }
+            else
+            {
+                ErrorMessage = "Please select a valid check-in date.";
+            }
+        }
+        else
+        {
+            ErrorMessage = "Invalid price format.";
+        }
+    }
+
+    private async Task SaveHotelDetails(string name, decimal price, DateTime CheckInDate, DateTime CheckOutDate)
+    {
+        try
+        {
+            var hotel = new Hotels
+                {
+                    Name = name,
+                    Price = price,
+                    CheckInDate = DateOnly.FromDateTime(CheckInDate),
+                    CheckOutDate = DateOnly.FromDateTime(CheckOutDate)
+                };
+
+            DbContext.Hotels.Add(hotel);
+            await DbContext.SaveChangesAsync();
+
+            Logger.LogInformation("Hotel details saved successfully.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving hotel details.");
+            ErrorMessage = $"Error: {ex.Message}";
+        }
     }
 
     // Model classes

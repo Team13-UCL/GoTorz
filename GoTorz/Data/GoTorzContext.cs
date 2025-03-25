@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using GoTorz.Model;
-using static GoTorz.Components.Pages.SalesPlanePage;
 
 namespace GoTorz.Data
 {
@@ -17,6 +16,10 @@ namespace GoTorz.Data
 
         public DbSet<Package> Package { get; set; } = default!;
         public DbSet<Plane> Plane { get; set; } = default!;
+
+        public DbSet<Hotels> Hotels { get; set; } = default!;
+
+        public DbSet<ReturnPlane> ReturnPlane { get; set; } = default!;
 
     }
 }
