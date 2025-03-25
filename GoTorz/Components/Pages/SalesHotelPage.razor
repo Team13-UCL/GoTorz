@@ -1,6 +1,6 @@
-﻿@inject HttpClient Http
+﻿@page "/SalesHotelPage"
+@inject HttpClient Http
 @inject ILogger<SalesHotelPage> Logger
-@page "/SalesHotelPage"
 @inject AmadeusAuthService AmadeusService
 @using System.Text.Json.Serialization;
 @using System.Text.Json
@@ -255,6 +255,14 @@ else
     private HotelOfferData SelectedHotel = null;
     private Offer SelectedOffer = null;
 
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public int PlaneId { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public int ReturnPlaneID { get; set; }
+
     // Fetch the Access Token when the page loads
     protected override async Task OnInitializedAsync()
     {
@@ -347,7 +355,7 @@ else
         {
             if (CheckInDate.HasValue)
             {
-                SaveHotelDetails(name, parsedPrice, CheckInDate.Value, CheckOutDate.Value);
+                SaveHotelDetails(name, parsedPrice, CheckInDate.Value, CheckOutDate.Value, PlaneId, ReturnPlaneID);
                 Navigation.NavigateTo("/packages");
             }
             else
@@ -361,7 +369,7 @@ else
         }
     }
 
-    private async Task SaveHotelDetails(string name, decimal price, DateTime CheckInDate, DateTime CheckOutDate)
+    private async Task SaveHotelDetails(string name, decimal price, DateTime checkInDate, DateTime checkOutDate, int planeId, int returnPlaneId)
     {
         try
         {
@@ -369,18 +377,28 @@ else
                 {
                     Name = name,
                     Price = price,
-                    CheckInDate = DateOnly.FromDateTime(CheckInDate),
-                    CheckOutDate = DateOnly.FromDateTime(CheckOutDate)
+                    CheckInDate = DateOnly.FromDateTime(checkInDate),
+                    CheckOutDate = DateOnly.FromDateTime(checkOutDate)
                 };
 
             DbContext.Hotels.Add(hotel);
             await DbContext.SaveChangesAsync();
 
-            Logger.LogInformation("Hotel details saved successfully.");
+            var package = new Package
+                {
+                    PlaneId = planeId,
+                    HotelId = hotel.HotelID,
+                    ReturnPlaneID = returnPlaneId
+                };
+
+            DbContext.Package.Add(package);
+            await DbContext.SaveChangesAsync();
+
+            Logger.LogInformation("Hotel and package details saved successfully.");
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error saving hotel details.");
+            Logger.LogError(ex, "Error saving hotel and package details.");
             ErrorMessage = $"Error: {ex.Message}";
         }
     }

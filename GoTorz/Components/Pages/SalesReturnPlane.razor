@@ -153,6 +153,10 @@ else
     [SupplyParameterFromQuery]
     public DateTime StartDate { get; set; } // Add StartDate parameter
 
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public int PlaneId { get; set; } // Add PlaneId parameter
+
     private DateTime? ReturnDate = null;
     private string ErrorMessage = "";
     private bool IsLoading = false;
@@ -162,7 +166,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         AccessToken = await AmadeusService.GetAccessTokenAsync();
-        Logger.LogInformation($"Initialized with parameters: ArrivalAirport={ArrivalAirport}, DepartureAirport={DepartureAirport}, Carrier={Carrier}, FlightPrice={FlightPrice}, StartDate={StartDate}");
+        Logger.LogInformation($"Initialized with parameters: ArrivalAirport={ArrivalAirport}, DepartureAirport={DepartureAirport}, Carrier={Carrier}, FlightPrice={FlightPrice}, StartDate={StartDate}, PlaneId={PlaneId}");
     }
 
     private async Task FetchReturnFlights()
@@ -211,7 +215,7 @@ else
         }
     }
 
-    private async Task SaveReturnFlightDetails(string departure, string arrival, string carrier, decimal price, DateTime returnDate)
+    private async Task SaveReturnFlightDetails(string departure, string arrival, string carrier, decimal price, DateTime returnDate, int planeId)
     {
         try
         {
@@ -231,7 +235,9 @@ else
             await DbContext.SaveChangesAsync();
 
             Logger.LogInformation("Return flight details saved successfully.");
-            Navigation.NavigateTo("/SalesHotelPage");
+
+            // Navigate to the hotel selection page with the PlaneId and ReturnPlaneID
+            Navigation.NavigateTo($"/SalesHotelPage?PlaneId={planeId}&ReturnPlaneID={returnPlane.ReturnPlaneId}");
         }
         catch (Exception ex)
         {
@@ -246,7 +252,7 @@ else
         {
             if (ReturnDate.HasValue)
             {
-                SaveReturnFlightDetails(departure, arrival, carrier, parsedPrice, ReturnDate.Value);
+                SaveReturnFlightDetails(departure, arrival, carrier, parsedPrice, ReturnDate.Value, PlaneId);
             }
             else
             {

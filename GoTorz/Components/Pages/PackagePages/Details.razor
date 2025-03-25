@@ -1,0 +1,44 @@
+﻿@page "/packages/details"
+@using Microsoft.EntityFrameworkCore
+@using GoTorz.Model
+@inject IDbContextFactory<GoTorz.Data.GoTorzContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Details</PageTitle>
+
+<h1>Details</h1>
+
+<div>
+    <h2>Package</h2>
+    <hr />
+    @if (package is null)
+    {
+        <p><em>Loading...</em></p>
+    }
+    else {
+        <dl class="row">
+        </dl>
+        <div>
+            <a href="@($"/packages/edit?planeid={package.PlaneId}")">Edit</a> |
+            <a href="@($"/packages")">Back to List</a>
+        </div>
+    }
+</div>
+
+@code {
+    private Package? package;
+
+    [SupplyParameterFromQuery]
+    private int PlaneId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        package = await context.Package.FirstOrDefaultAsync(m => m.PlaneId == PlaneId);
+
+        if (package is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+}

@@ -1,0 +1,39 @@
+﻿@page "/packages"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using GoTorz.Model
+@using GoTorz.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<GoTorz.Data.GoTorzContext> DbFactory
+
+<PageTitle>Index</PageTitle>
+
+<h1>Index</h1>
+
+<p>
+    <a href="packages/create">Create New</a>
+</p>
+
+<QuickGrid TGridItem="Package" Class="table" Items="packages">
+    <PropertyColumn Property="@(p => p.PlaneId)" Title="Plane ID" />
+    <PropertyColumn Property="@(p => p.HotelId)" Title="Hotel ID" />
+    <PropertyColumn Property="@(p => p.ReturnPlaneID)" Title="Return Plane ID" />
+    <TemplateColumn Context="package">
+        <a href="@($"packages/edit?planeid={package.PlaneId}")">Edit</a> |
+        <a href="@($"packages/details?planeid={package.PlaneId}")">Details</a> |
+        <a href="@($"packages/delete?planeid={package.PlaneId}")">Delete</a>
+    </TemplateColumn>
+</QuickGrid>
+
+@code {
+    private GoTorzContext context = default!;
+    private IQueryable<Package> packages = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        context = DbFactory.CreateDbContext();
+        packages = context.Package.AsQueryable();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}

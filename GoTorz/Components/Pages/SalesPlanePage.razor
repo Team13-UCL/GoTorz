@@ -205,6 +205,14 @@ else
             await DbContext.SaveChangesAsync();
 
             Logger.LogInformation("Flight details saved successfully.");
+
+            // Navigate to the return flight selection page with the PlaneId
+            var departureEncoded = Uri.EscapeDataString(departure);
+            var arrivalEncoded = Uri.EscapeDataString(arrival);
+            var carrierEncoded = Uri.EscapeDataString(carrier);
+            var startDateStr = startDate.ToString("yyyy-MM-dd");
+
+            Navigation.NavigateTo($"/SalesReturnPlane?DepartureAirport={departureEncoded}&ArrivalAirport={arrivalEncoded}&Carrier={carrierEncoded}&FlightPrice={price}&StartDate={startDateStr}&PlaneId={plane.PlaneId}");
         }
         catch (Exception ex)
         {
@@ -221,14 +229,6 @@ else
             {
                 // Save the details to the database first
                 SaveFlightDetails(departure, arrival, carrier, parsedPrice, DepartureDate.Value);
-
-                // Include the StartDate in the navigation
-                var departureEncoded = Uri.EscapeDataString(departure);
-                var arrivalEncoded = Uri.EscapeDataString(arrival);
-                var carrierEncoded = Uri.EscapeDataString(carrier);
-                var startDateStr = DepartureDate.Value.ToString("yyyy-MM-dd");
-
-                Navigation.NavigateTo($"/SalesReturnPlane?DepartureAirport={departureEncoded}&ArrivalAirport={arrivalEncoded}&Carrier={carrierEncoded}&FlightPrice={parsedPrice}&StartDate={startDateStr}");
             }
             else
             {
@@ -240,6 +240,7 @@ else
             ErrorMessage = "Invalid price format.";
         }
     }
+
 
     
 
