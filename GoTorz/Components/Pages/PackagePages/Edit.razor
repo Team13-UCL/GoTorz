@@ -4,76 +4,94 @@
 @inject IDbContextFactory<GoTorz.Data.GoTorzContext> DbFactory
 @inject NavigationManager NavigationManager
 
-<PageTitle>Edit</PageTitle>
+<PageTitle>Edit Package</PageTitle>
 
-<h1>Edit</h1>
+<div class="container mt-5">
+    <h1 class="text-center"><i class="fas fa-edit"></i> Edit Package</h1>
+    <hr />
 
-<h2>Package</h2>
-<hr />
-@if (Package is null)
-{
-    <p><em>Loading...</em></p>
-}
-else
-{
-    <div class="row">
-        <div class="col-md-4">
-            <EditForm method="post" Model="Package" OnValidSubmit="UpdatePackage" FormName="edit" Enhance>
+    @if (Package is null)
+    {
+        <div class="text-center mt-4">
+            <p><em>Loading package details...</em></p>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm p-4">
+            <EditForm method="post" Model="Package" OnValidSubmit="UpdatePackage">
                 <DataAnnotationsValidator />
-                <ValidationSummary role="alert"/>
-                <input type="hidden" name="Package.PlaneId" value="@Package.PlaneId" />
-                <div class="form-group">
-                    <label>Start Date</label>
-                    <InputDate class="form-control" @bind-Value="Package.Plane.StartDate" />
+                <ValidationSummary class="alert alert-danger" role="alert" />
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h4><i class="fas fa-plane"></i> Flight Details</h4>
+                        <div class="form-group">
+                            <label>Start Date</label>
+                            <InputDate class="form-control" @bind-Value="Package.Plane.StartDate" />
+                        </div>
+                        <div class="form-group">
+                            <label>Departure Airport</label>
+                            <InputText class="form-control" @bind-Value="Package.Plane.DepartureAirport" />
+                        </div>
+                        <div class="form-group">
+                            <label>Arrival Airport</label>
+                            <InputText class="form-control" @bind-Value="Package.Plane.ArrivalAirport" />
+                        </div>
+                        <div class="form-group">
+                            <label>Carrier Code</label>
+                            <InputText class="form-control" @bind-Value="Package.Plane.CarrierCode" />
+                        </div>
+                        <div class="form-group">
+                            <label>Price</label>
+                            <InputNumber class="form-control" @bind-Value="Package.Plane.Price" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h4><i class="fas fa-plane-arrival"></i> Return Flight</h4>
+                        <div class="form-group">
+                            <label>Return Date</label>
+                            <InputDate class="form-control" @bind-Value="Package.ReturnPlane.ReturnDate" />
+                        </div>
+                        <div class="form-group">
+                            <label>Return Duration</label>
+                            <InputNumber class="form-control" @bind-Value="Package.ReturnPlane.Duration" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-12">
+                        <h4 class="mt-3"><i class="fas fa-hotel"></i> Hotel Details</h4>
+                        <div class="form-group">
+                            <label>Hotel Name</label>
+                            <InputText class="form-control" @bind-Value="Package.Hotels.Name" />
+                        </div>
+                        <div class="form-group">
+                            <label>Hotel Price</label>
+                            <InputNumber class="form-control" @bind-Value="Package.Hotels.Price" />
+                        </div>
+                        <div class="form-group">
+                            <label>Check-In Date</label>
+                            <InputDate class="form-control" @bind-Value="Package.Hotels.CheckInDate" />
+                        </div>
+                        <div class="form-group">
+                            <label>Check-Out Date</label>
+                            <InputDate class="form-control" @bind-Value="Package.Hotels.CheckOutDate" />
+                        </div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Departure Airport</label>
-                    <InputText class="form-control" @bind-Value="Package.Plane.DepartureAirport" />
+
+                <div class="mt-4 d-flex justify-content-between">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                    <a href="/packages" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
                 </div>
-                <div class="form-group">
-                    <label>Arrival Airport</label>
-                    <InputText class="form-control" @bind-Value="Package.Plane.ArrivalAirport" />
-                </div>
-                <div class="form-group">
-                    <label>Carrier Code</label>
-                    <InputText class="form-control" @bind-Value="Package.Plane.CarrierCode" />
-                </div>
-                <div class="form-group">
-                    <label>Price</label>
-                    <InputNumber class="form-control" @bind-Value="Package.Plane.Price" />
-                </div>
-                <div class="form-group">
-                    <label>Return Date</label>
-                    <InputDate class="form-control" @bind-Value="Package.ReturnPlane.ReturnDate" />
-                </div>
-                <div class="form-group">
-                    <label>Return Duration</label>
-                    <InputNumber class="form-control" @bind-Value="Package.ReturnPlane.Duration" />
-                </div>
-                <div class="form-group">
-                    <label>Hotel Name</label>
-                    <InputText class="form-control" @bind-Value="Package.Hotels.Name" />
-                </div>
-                <div class="form-group">
-                    <label>Hotel Price</label>
-                    <InputNumber class="form-control" @bind-Value="Package.Hotels.Price" />
-                </div>
-                <div class="form-group">
-                    <label>Check-In Date</label>
-                    <InputDate class="form-control" @bind-Value="Package.Hotels.CheckInDate" />
-                </div>
-                <div class="form-group">
-                    <label>Check-Out Date</label>
-                    <InputDate class="form-control" @bind-Value="Package.Hotels.CheckOutDate" />
-                </div>
-                <button type="submit" class="btn btn-primary">Save</button>
             </EditForm>
         </div>
-    </div>
-}
-
-<div>
-    <a href="/packages">Back to List</a>
+    }
 </div>
 
 @code {
@@ -98,8 +116,6 @@ else
         }
     }
 
-    // To protect from overposting attacks, enable the specific properties you want to bind to.
-    // For more information, see https://learn.microsoft.com/aspnet/core/blazor/forms/#mitigate-overposting-attacks.
     private async Task UpdatePackage()
     {
         using var context = DbFactory.CreateDbContext();

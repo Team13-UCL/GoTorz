@@ -17,103 +17,86 @@
 }
 else
 {
-    <div class="search-form">
-        <div class="form-group">
-            <label>City Code:</label>
-            <input @bind="CityCode" placeholder="e.g. NYC" class="form-control" />
-        </div>
+    @inject NavigationManager Navigation
 
-        <div class="form-group">
-            <label>Check-in Date:</label>
-            <input type="date" @bind="CheckInDate" class="form-control" />
-        </div>
+    <div class="container my-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="card shadow-lg">
+                    <div class="card-body">
+                        <h3 class="text-center mb-4"><i class="fas fa-hotel"></i> Find Your Hotel</h3>
 
-        <div class="form-group">
-            <label>Check-out Date:</label>
-            <input type="date" @bind="CheckOutDate" class="form-control" />
-        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-map-marker-alt"></i> City Code:</label>
+                            <input @bind="CityCode" placeholder="e.g. NYC" class="form-control" />
+                        </div>
 
-        <div class="form-group">
-            <label>Adults:</label>
-            <input type="number" @bind="Adults" min="1" max="9" class="form-control" />
-        </div>
+                        <div class="form-group mt-3">
+                            <label><i class="fas fa-calendar-check"></i> Check-in Date:</label>
+                            <input type="date" @bind="CheckInDate" class="form-control" />
+                        </div>
 
-        <button @onclick="FetchHotelsWithPricing" class="btn btn-primary">Search Hotels</button>
-    </div>
+                        <div class="form-group mt-3">
+                            <label><i class="fas fa-calendar-times"></i> Check-out Date:</label>
+                            <input type="date" @bind="CheckOutDate" class="form-control" />
+                        </div>
 
-    @if (IsLoading)
-    {
-        <p>Loading...</p>
-    }
-    else if (HotelOffers != null && HotelOffers.Count > 0)
-    {
-        <h4>Hotel Results:</h4>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Hotel Name</th>
-                    <th>City Code</th>
-                    <th>Price</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var hotelOffer in HotelOffers)
-                {
-                    <tr>
-                        <td>@hotelOffer.Hotel.Name</td>
-                        <td>@hotelOffer.Hotel.CityCode</td>
-                        <td>
-                            @if (hotelOffer.Offers != null && hotelOffer.Offers.Count > 0)
-                            {
-                                @($"{hotelOffer.Offers[0].Price.Total} {hotelOffer.Offers[0].Price.Currency}")
-                            }
-                            else
-                            {
-                                <span>No price available</span>
-                            }
-                        </td>
-                        <td>
-                            <button @onclick="() => SelectHotelOffer(hotelOffer)" class="btn btn-sm btn-info">Select</button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    }
-    else if (!string.IsNullOrEmpty(ErrorMessage))
-    {
-        <p style="color: red;">@ErrorMessage</p>
-    }
+                        <div class="form-group mt-3">
+                            <label><i class="fas fa-user-friends"></i> Adults:</label>
+                            <input type="number" @bind="Adults" min="1" max="9" class="form-control" />
+                        </div>
 
-    @if (SelectedHotel != null)
-    {
-        <div class="selected-offer">
-            <h4>Selected Hotel</h4>
-            <div class="card">
-                <div class="card-header">
-                    <h5>@SelectedHotel.Hotel.Name</h5>
+                        <div class="text-center mt-4">
+                            <button @onclick="FetchHotelsWithPricing" class="btn btn-primary w-100">
+                                <i class="fas fa-search"></i> Search Hotels
+                            </button>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <p><strong>Dates:</strong> @CheckInDate?.ToString("yyyy-MM-dd") to @CheckOutDate?.ToString("yyyy-MM-dd")</p>
-                    <p><strong>Room Options:</strong></p>
+            </div>
+        </div>
 
-                    <table class="table">
-                        <thead>
+        @if (IsLoading)
+        {
+            <div class="text-center mt-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p>Searching for hotels...</p>
+            </div>
+        }
+        else if (HotelOffers != null && HotelOffers.Count > 0)
+        {
+            <div class="mt-5">
+                <h4 class="text-center"><i class="fas fa-bed"></i> Hotel Results</h4>
+                <div class="table-responsive">
+                    <table class="table table-hover mt-3 shadow-sm">
+                        <thead class="table-dark">
                             <tr>
-                                <th>Room Type</th>
+                                <th>Hotel Name</th>
+                                <th>City Code</th>
                                 <th>Price</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var offer in SelectedHotel.Offers)
+                            @foreach (var hotelOffer in HotelOffers)
                             {
                                 <tr>
-                                    <td>@(offer.Room?.TypeEstimated?.Category ?? "Standard")</td>
-                                    <td>@offer.Price.Total @offer.Price.Currency</td>
+                                    <td>@hotelOffer.Hotel.Name</td>
+                                    <td>@hotelOffer.Hotel.CityCode</td>
                                     <td>
-                                        <button @onclick="() => SelectRoom(offer, SelectedHotel.Hotel.Name, offer.Price.Total)" class="btn btn-sm btn-success">Book</button>
+                                        @if (hotelOffer.Offers != null && hotelOffer.Offers.Count > 0)
+                                        {
+                                            <strong>@hotelOffer.Offers[0].Price.Total @hotelOffer.Offers[0].Price.Currency</strong>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">No price available</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <button @onclick="() => SelectHotelOffer(hotelOffer)" class="btn btn-sm btn-success">
+                                            <i class="fas fa-check-circle"></i> Select
+                                        </button>
                                     </td>
                                 </tr>
                             }
@@ -121,127 +104,81 @@ else
                     </table>
                 </div>
             </div>
-        </div>
-    }
+        }
+        else if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="alert alert-danger text-center mt-4">
+                <i class="fas fa-exclamation-triangle"></i> @ErrorMessage
+            </div>
+        }
 
-    @if (SelectedOffer != null)
-    {
-        <div class="booking-summary">
-            <h4>Booking Summary</h4>
-            <div class="card">
-                <div class="card-header">
-                    <h5>@SelectedHotel.Hotel.Name</h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>Dates:</strong> @CheckInDate?.ToString("yyyy-MM-dd") to @CheckOutDate?.ToString("yyyy-MM-dd")</p>
-                    <p><strong>Room Type:</strong> @(SelectedOffer.Room?.TypeEstimated?.Category ?? "Standard")</p>
-                    <p><strong>Price:</strong> @SelectedOffer.Price.Total @SelectedOffer.Price.Currency</p>
-                    <p><strong>Description:</strong> @(SelectedOffer.Room?.Description?.Text ?? "No description available")</p>
-                    <button class="btn btn-success">Confirm Booking</button>
+        @if (SelectedHotel != null)
+        {
+            <div class="mt-5">
+                <h4 class="text-center"><i class="fas fa-building"></i> Selected Hotel</h4>
+                <div class="card shadow-lg">
+                    <div class="card-header text-white bg-dark">
+                        <h5>@SelectedHotel.Hotel.Name</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong><i class="fas fa-calendar-alt"></i> Dates:</strong> @CheckInDate?.ToString("yyyy-MM-dd") to @CheckOutDate?.ToString("yyyy-MM-dd")</p>
+                        <p><strong><i class="fas fa-bed"></i> Room Options:</strong></p>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover mt-3 shadow-sm">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Room Type</th>
+                                        <th>Price</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var offer in SelectedHotel.Offers)
+                                    {
+                                        <tr>
+                                            <td>@(offer.Room?.TypeEstimated?.Category ?? "Standard")</td>
+                                            <td><strong>@offer.Price.Total @offer.Price.Currency</strong></td>
+                                            <td>
+                                                <button @onclick="() => SelectRoom(offer, SelectedHotel.Hotel.Name, offer.Price.Total)" class="btn btn-sm btn-info">
+                                                    <i class="fas fa-check-circle"></i> Book
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-    }
+        }
+
+        @if (SelectedOffer != null)
+        {
+            <div class="mt-5">
+                <h4 class="text-center"><i class="fas fa-receipt"></i> Booking Summary</h4>
+                <div class="card shadow-lg">
+                    <div class="card-header text-white bg-success">
+                        <h5>@SelectedHotel.Hotel.Name</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong><i class="fas fa-calendar-alt"></i> Dates:</strong> @CheckInDate?.ToString("yyyy-MM-dd") to @CheckOutDate?.ToString("yyyy-MM-dd")</p>
+                        <p><strong><i class="fas fa-bed"></i> Room Type:</strong> @(SelectedOffer.Room?.TypeEstimated?.Category ?? "Standard")</p>
+                        <p><strong><i class="fas fa-dollar-sign"></i> Price:</strong> @SelectedOffer.Price.Total @SelectedOffer.Price.Currency</p>
+                        <p><strong><i class="fas fa-info-circle"></i> Description:</strong> @(SelectedOffer.Room?.Description?.Text ?? "No description available")</p>
+
+                        <div class="text-center mt-4">
+                            <button class="btn btn-success w-100">
+                                <i class="fas fa-check"></i> Confirm Booking
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
 }
-
-<style>
-    .search-form {
-        max-width: 600px;
-        margin: 0 auto;
-        padding: 20px;
-        border: 1px solid #ccc;
-        border-radius: 10px;
-        background-color: #f9f9f9;
-    }
-
-    .form-group {
-        margin-bottom: 15px;
-    }
-
-    .form-control {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 5px;
-    }
-
-    .btn {
-        display: block;
-        width: 100%;
-        padding: 10px;
-        border: none;
-        border-radius: 5px;
-        background-color: #007bff;
-        color: white;
-        font-size: 16px;
-        cursor: pointer;
-    }
-
-        .btn:hover {
-            background-color: #0056b3;
-        }
-
-    .btn-sm {
-        width: auto;
-        padding: 5px 10px;
-        font-size: 14px;
-    }
-
-    .btn-info {
-        background-color: #17a2b8;
-    }
-
-        .btn-info:hover {
-            background-color: #138496;
-        }
-
-    .btn-success {
-        background-color: #28a745;
-    }
-
-        .btn-success:hover {
-            background-color: #218838;
-        }
-
-    .table {
-        width: 100%;
-        margin-top: 20px;
-        border-collapse: collapse;
-    }
-
-        .table th, .table td {
-            padding: 10px;
-            border: 1px solid #ddd;
-        }
-
-        .table th {
-            background-color: #f2f2f2;
-        }
-
-    .selected-offer, .booking-summary {
-        margin-top: 30px;
-        padding: 20px;
-        border: 1px solid #ddd;
-        border-radius: 10px;
-        background-color: #f9f9f9;
-    }
-
-    .card {
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        overflow: hidden;
-    }
-
-    .card-header {
-        padding: 10px 15px;
-        background-color: #007bff;
-        color: white;
-    }
-
-    .card-body {
-        padding: 15px;
-    }
-</style>
 
 @code {
     private string CityCode = "";
@@ -403,167 +340,5 @@ else
         }
     }
 
-    // Model classes
-    public class HotelResponse
-    {
-        [JsonPropertyName("data")]
-        public List<Hotel> Data { get; set; }
-    }
 
-    public class Hotel
-    {
-        [JsonPropertyName("hotelId")]
-        public string Id { get; set; }
-
-        [JsonPropertyName("name")]
-        public string Name { get; set; }
-
-        [JsonPropertyName("iataCode")]
-        public string IataCode { get; set; }
-
-        [JsonPropertyName("address")]
-        public Address Address { get; set; }
-    }
-
-    public class Address
-    {
-        [JsonPropertyName("countryCode")]
-        public string CountryCode { get; set; }
-    }
-
-    // Hotel Offers Models
-    public class HotelOfferResponse
-    {
-        [JsonPropertyName("data")]
-        public List<HotelOfferData> Data { get; set; }
-    }
-
-    public class HotelOfferData
-    {
-        [JsonPropertyName("type")]
-        public string Type { get; set; }
-
-        [JsonPropertyName("hotel")]
-        public HotelInfo Hotel { get; set; }
-
-        [JsonPropertyName("available")]
-        public bool Available { get; set; }
-
-        [JsonPropertyName("offers")]
-        public List<Offer> Offers { get; set; }
-    }
-
-    public class HotelInfo
-    {
-        [JsonPropertyName("type")]
-        public string Type { get; set; }
-
-        [JsonPropertyName("hotelId")]
-        public string HotelId { get; set; }
-
-        [JsonPropertyName("chainCode")]
-        public string ChainCode { get; set; }
-
-        [JsonPropertyName("name")]
-        public string Name { get; set; }
-
-        [JsonPropertyName("cityCode")]
-        public string CityCode { get; set; }
-
-        [JsonPropertyName("address")]
-        public HotelAddress Address { get; set; }
-    }
-
-    public class HotelAddress
-    {
-        [JsonPropertyName("countryCode")]
-        public string CountryCode { get; set; }
-    }
-
-    public class Offer
-    {
-        [JsonPropertyName("id")]
-        public string Id { get; set; }
-
-        [JsonPropertyName("checkInDate")]
-        public string CheckInDate { get; set; }
-
-        [JsonPropertyName("checkOutDate")]
-        public string CheckOutDate { get; set; }
-
-        [JsonPropertyName("rateCode")]
-        public string RateCode { get; set; }
-
-        [JsonPropertyName("room")]
-        public Room Room { get; set; }
-
-        [JsonPropertyName("guests")]
-        public Guests Guests { get; set; }
-
-        [JsonPropertyName("price")]
-        public Price Price { get; set; }
-    }
-
-    public class Room
-    {
-        [JsonPropertyName("type")]
-        public string Type { get; set; }
-
-        [JsonPropertyName("typeEstimated")]
-        public TypeEstimated TypeEstimated { get; set; }
-
-        [JsonPropertyName("description")]
-        public Description Description { get; set; }
-    }
-
-    public class TypeEstimated
-    {
-        [JsonPropertyName("category")]
-        public string Category { get; set; }
-
-        [JsonPropertyName("beds")]
-        public int? Beds { get; set; }
-
-        [JsonPropertyName("bedType")]
-        public string BedType { get; set; }
-    }
-
-    public class Description
-    {
-        [JsonPropertyName("text")]
-        public string Text { get; set; }
-    }
-
-    public class Guests
-    {
-        [JsonPropertyName("adults")]
-        public int Adults { get; set; }
-    }
-
-    public class Price
-    {
-        [JsonPropertyName("currency")]
-        public string Currency { get; set; }
-
-        [JsonPropertyName("total")]
-        public string Total { get; set; }
-
-        [JsonPropertyName("base")]
-        public string Base { get; set; }
-
-        [JsonPropertyName("taxes")]
-        public List<Tax> Taxes { get; set; }
-    }
-
-    public class Tax
-    {
-        [JsonPropertyName("code")]
-        public string Code { get; set; }
-
-        [JsonPropertyName("amount")]
-        public string Amount { get; set; }
-
-        [JsonPropertyName("currency")]
-        public string Currency { get; set; }
-    }
 }
