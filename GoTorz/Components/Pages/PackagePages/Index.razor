@@ -8,16 +8,15 @@
 
 <PageTitle>Index</PageTitle>
 
-<h1>Index</h1>
-
-<p>
-    <a href="packages/create">Create New</a>
-</p>
+<h1>Packages</h1>
 
 <QuickGrid TGridItem="Package" Class="table" Items="packages">
     <PropertyColumn Property="@(p => p.PlaneId)" Title="Plane ID" />
     <PropertyColumn Property="@(p => p.HotelId)" Title="Hotel ID" />
     <PropertyColumn Property="@(p => p.ReturnPlaneID)" Title="Return Plane ID" />
+    <PropertyColumn Property="@(p => p.Plane.StartDate)" Title="Start Date" />
+    <PropertyColumn Property="@(p => p.Plane.ArrivalAirport)" Title="Destination Airport" />
+    <PropertyColumn Property="@(p => p.Plane.DepartureAirport)" Title="Departure Airport" />
     <TemplateColumn Context="package">
         <a href="@($"packages/edit?planeid={package.PlaneId}")">Edit</a> |
         <a href="@($"packages/details?planeid={package.PlaneId}")">Details</a> |
@@ -32,7 +31,7 @@
     protected override async Task OnInitializedAsync()
     {
         context = DbFactory.CreateDbContext();
-        packages = context.Package.AsQueryable();
+        packages = context.Package.Include(p => p.Plane).AsQueryable();
     }
 
     public async ValueTask DisposeAsync() => await context.DisposeAsync();

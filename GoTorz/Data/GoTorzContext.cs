@@ -18,14 +18,26 @@ namespace GoTorz.Data
             modelBuilder.Entity<Package>()
                 .HasKey(p => new { p.PlaneId, p.HotelId, p.ReturnPlaneID });
 
+            modelBuilder.Entity<Package>()
+                .HasOne(p => p.Plane)
+                .WithMany()
+                .HasForeignKey(p => p.PlaneId);
+
+            modelBuilder.Entity<Package>()
+                .HasOne(p => p.ReturnPlane)
+                .WithMany()
+                .HasForeignKey(p => p.ReturnPlaneID);
+
+            modelBuilder.Entity<Package>()
+                .HasOne(p => p.Hotels)
+                .WithMany()
+                .HasForeignKey(p => p.HotelId);
+
             base.OnModelCreating(modelBuilder);
         }
         public DbSet<Package> Package { get; set; } = default!;
         public DbSet<Plane> Plane { get; set; } = default!;
-
         public DbSet<Hotels> Hotels { get; set; } = default!;
-
         public DbSet<ReturnPlane> ReturnPlane { get; set; } = default!;
-
     }
 }

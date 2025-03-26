@@ -22,6 +22,50 @@ else
                 <DataAnnotationsValidator />
                 <ValidationSummary role="alert"/>
                 <input type="hidden" name="Package.PlaneId" value="@Package.PlaneId" />
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <InputDate class="form-control" @bind-Value="Package.Plane.StartDate" />
+                </div>
+                <div class="form-group">
+                    <label>Departure Airport</label>
+                    <InputText class="form-control" @bind-Value="Package.Plane.DepartureAirport" />
+                </div>
+                <div class="form-group">
+                    <label>Arrival Airport</label>
+                    <InputText class="form-control" @bind-Value="Package.Plane.ArrivalAirport" />
+                </div>
+                <div class="form-group">
+                    <label>Carrier Code</label>
+                    <InputText class="form-control" @bind-Value="Package.Plane.CarrierCode" />
+                </div>
+                <div class="form-group">
+                    <label>Price</label>
+                    <InputNumber class="form-control" @bind-Value="Package.Plane.Price" />
+                </div>
+                <div class="form-group">
+                    <label>Return Date</label>
+                    <InputDate class="form-control" @bind-Value="Package.ReturnPlane.ReturnDate" />
+                </div>
+                <div class="form-group">
+                    <label>Return Duration</label>
+                    <InputNumber class="form-control" @bind-Value="Package.ReturnPlane.Duration" />
+                </div>
+                <div class="form-group">
+                    <label>Hotel Name</label>
+                    <InputText class="form-control" @bind-Value="Package.Hotels.Name" />
+                </div>
+                <div class="form-group">
+                    <label>Hotel Price</label>
+                    <InputNumber class="form-control" @bind-Value="Package.Hotels.Price" />
+                </div>
+                <div class="form-group">
+                    <label>Check-In Date</label>
+                    <InputDate class="form-control" @bind-Value="Package.Hotels.CheckInDate" />
+                </div>
+                <div class="form-group">
+                    <label>Check-Out Date</label>
+                    <InputDate class="form-control" @bind-Value="Package.Hotels.CheckOutDate" />
+                </div>
                 <button type="submit" class="btn btn-primary">Save</button>
             </EditForm>
         </div>
@@ -42,7 +86,11 @@ else
     protected override async Task OnInitializedAsync()
     {
         using var context = DbFactory.CreateDbContext();
-        Package ??= await context.Package.FirstOrDefaultAsync(m => m.PlaneId == PlaneId);
+        Package ??= await context.Package
+            .Include(p => p.Plane)
+            .Include(p => p.ReturnPlane)
+            .Include(p => p.Hotels)
+            .FirstOrDefaultAsync(m => m.PlaneId == PlaneId);
 
         if (Package is null)
         {
