@@ -108,6 +108,7 @@ else
 }
 
 @code {
+	//we get the parameters from the query string and store them in a parameter that the next page can use
     [Parameter]
     [SupplyParameterFromQuery]
     public string DepartureAirport { get; set; }

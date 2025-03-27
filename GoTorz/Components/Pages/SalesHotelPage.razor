@@ -262,11 +262,19 @@ else
             var offersResponse = await AmadeusService.SearchHotelOffersAsync(hotelIds, checkInDateString, checkOutDateString, Adults);
             var offerData = JsonSerializer.Deserialize<HotelOfferResponse>(offersResponse)?.Data;
 
-            HotelOffers = offerData ?? new List<HotelOfferData>();
+            if (offerData == null || offerData.Count == 0)
+            {
+                ErrorMessage = "No offers available for the selected dates.";
+                IsLoading = false;
+                return;
+            }
+
+            // Filter out hotels with no offers
+            HotelOffers = offerData.Where(h => h.Offers != null && h.Offers.Count > 0).ToList();
 
             if (HotelOffers.Count == 0)
             {
-                ErrorMessage = "No offers available for the selected dates.";
+                ErrorMessage = "No valid offers available for the selected dates.";
             }
         }
         catch (Exception ex)

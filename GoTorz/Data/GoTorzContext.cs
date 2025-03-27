@@ -13,6 +13,7 @@ namespace GoTorz.Data
             : base(options)
         {
         }
+        //create a composite key
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Package>()
@@ -35,6 +36,8 @@ namespace GoTorz.Data
 
             base.OnModelCreating(modelBuilder);
         }
+
+        //add the DbSet, mapping the model to the database
         public DbSet<Package> Package { get; set; } = default!;
         public DbSet<Plane> Plane { get; set; } = default!;
         public DbSet<Hotels> Hotels { get; set; } = default!;

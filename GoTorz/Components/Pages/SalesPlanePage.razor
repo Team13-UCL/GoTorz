@@ -179,7 +179,8 @@ else
 
             Logger.LogInformation("Flight details saved successfully.");
 
-            // Navigate to the return flight selection page with the PlaneId
+			// Navigate to the return flight selection page with the PlaneId, we do this to avoid passing the entire Plane object and avoid serialization issues, 
+			// hvis der er et mellemrum eller andet som ikke må være i url så kan det give problemer
             var departureEncoded = Uri.EscapeDataString(departure);
             var arrivalEncoded = Uri.EscapeDataString(arrival);
             var carrierEncoded = Uri.EscapeDataString(carrier);
