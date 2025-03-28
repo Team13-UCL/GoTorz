@@ -18,52 +18,73 @@
     }
     else
     {
-        <div class="card shadow-sm p-4">
-            <h4 class="mb-3"><i class="fas fa-plane"></i> Flight Details</h4>
-            <dl class="row">
-                <dt class="col-sm-3">Plane ID:</dt>
-                <dd class="col-sm-9">@package.PlaneId</dd>
-                <dt class="col-sm-3">Carrier Code:</dt>
-                <dd class="col-sm-9">@package.Plane.CarrierCode</dd>
-                <dt class="col-sm-3">Departure Airport:</dt>
-                <dd class="col-sm-9">@package.Plane.DepartureAirport</dd>
-                <dt class="col-sm-3">Arrival Airport:</dt>
-                <dd class="col-sm-9">@package.Plane.ArrivalAirport</dd>
-                <dt class="col-sm-3">Start Date:</dt>
-                <dd class="col-sm-9"><b>@package.Plane.StartDate.ToString("yyyy-MM-dd")</b></dd>
-                <dt class="col-sm-3">Price:</dt>
-                <dd class="col-sm-9">@($"{package.Plane.Price:C}")</dd>
-            </dl>
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card shadow-sm p-4">
+                    <h4 class="mb-3"><i class="fas fa-plane"></i> Flight Details</h4>
+                    <dl class="row">
+                        <dt class="col-sm-3">Plane ID:</dt>
+                        <dd class="col-sm-9">@package.PlaneId</dd>
+                        <dt class="col-sm-3">Carrier Code:</dt>
+                        <dd class="col-sm-9">@package.Plane.CarrierCode</dd>
+                        <dt class="col-sm-3">Departure Airport:</dt>
+                        <dd class="col-sm-9">@package.Plane.DepartureAirport</dd>
+                        <dt class="col-sm-3">Arrival Airport:</dt>
+                        <dd class="col-sm-9">@package.Plane.ArrivalAirport</dd>
+                        <dt class="col-sm-3">Start Date:</dt>
+                        <dd class="col-sm-9"><b>@package.Plane.StartDate.ToString("yyyy-MM-dd")</b></dd>
+                        <dt class="col-sm-3">Price:</dt>
+                        <dd class="col-sm-9">@($"{package.Plane.Price} €")</dd>
+                    </dl>
 
-            <h4 class="mt-4 mb-3"><i class="fas fa-plane-arrival"></i> Return Flight Details</h4>
-            <dl class="row">
-                <dt class="col-sm-3">Return Plane ID:</dt>
-                <dd class="col-sm-9">@package.ReturnPlaneID</dd>
-                <dt class="col-sm-3">Return Date:</dt>
-                <dd class="col-sm-9"><b>@package.ReturnPlane.ReturnDate.ToString("yyyy-MM-dd")</b></dd>
-                <dt class="col-sm-3">Duration:</dt>
-                <dd class="col-sm-9">@package.ReturnPlane.Duration</dd>
-            </dl>
+                    <h4 class="mt-4 mb-3"><i class="fas fa-plane-arrival"></i> Return Flight Details</h4>
+                    <dl class="row">
+                        <dt class="col-sm-3">Return Plane ID:</dt>
+                        <dd class="col-sm-9">@package.ReturnPlaneID</dd>
+                        <dt class="col-sm-3">Carrier Code:</dt>
+                        <dd class="col-sm-9">@package.ReturnPlane.CarrierCode</dd>
+                        <dt class="col-sm-3">Departure Airport:</dt>
+                        <dd class="col-sm-9">@package.ReturnPlane.DepartureAirport</dd>
+                        <dt class="col-sm-3">Arrival Airport:</dt>
+                        <dd class="col-sm-9">@package.ReturnPlane.ArrivalAirport</dd>
+                        <dt class="col-sm-3">Return Date:</dt>
+                        <dd class="col-sm-9"><b>@package.ReturnPlane.ReturnDate.ToString("yyyy-MM-dd")</b></dd>
+                        <dt class="col-sm-3">Duration in days:</dt>
+                        <dd class="col-sm-9">@package.ReturnPlane.Duration</dd>
+                        <dt class="col-sm-3">Price:</dt>
+                        <dd class="col-sm-9">@($"{package.ReturnPlane.Price} €")</dd>
+                    </dl>
 
-            <h4 class="mt-4 mb-3"><i class="fas fa-hotel"></i> Hotel Details</h4>
-            <dl class="row">
-                <dt class="col-sm-3">Hotel Name:</dt>
-                <dd class="col-sm-9">@package.Hotels.Name</dd>
-                <dt class="col-sm-3">Hotel Price:</dt>
-                <dd class="col-sm-9">@($"{package.Hotels.Price:C}")</dd>
-                <dt class="col-sm-3">Check-In Date:</dt>
-                <dd class="col-sm-9">@package.Hotels.CheckInDate.ToString("yyyy-MM-dd")</dd>
-                <dt class="col-sm-3">Check-Out Date:</dt>
-                <dd class="col-sm-9">@package.Hotels.CheckOutDate.ToString("yyyy-MM-dd")</dd>
-            </dl>
+                    <h4 class="mt-4 mb-3"><i class="fas fa-hotel"></i> Hotel Details</h4>
+                    <dl class="row">
+                        <dt class="col-sm-3">Hotel Name:</dt>
+                        <dd class="col-sm-9">@package.Hotels.Name</dd>
+                        <dt class="col-sm-3">Check-In Date:</dt>
+                        <dd class="col-sm-9">@package.Hotels.CheckInDate.ToString("yyyy-MM-dd")</dd>
+                        <dt class="col-sm-3">Check-Out Date:</dt>
+                        <dd class="col-sm-9">@package.Hotels.CheckOutDate.ToString("yyyy-MM-dd")</dd>
+                        <dt class="col-sm-3">Hotel Price:</dt>
+                        <dd class="col-sm-9">@($"{package.Hotels.Price} €")</dd>
+                    </dl>
 
-            <div class="mt-4 d-flex justify-content-between">
-                <a href="@($"/packages/edit?planeid={package.PlaneId}")" class="btn btn-warning">
-                    <i class="fas fa-edit"></i> Edit Package
-                </a>
-                <a href="@($"/packages")" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to List
-                </a>
+                    <div class="mt-4 d-flex justify-content-between">
+                        <a href="@($"/packages/edit?planeid={package.PlaneId}")" class="btn btn-warning">
+                            <i class="fas fa-edit"></i> Edit Package
+                        </a>
+                        <a href="@($"/packages")" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm p-4">
+                    <h4 class="mb-3"><i class="fas fa-info-circle"></i> Package Details</h4>
+                    <dl class="row">
+                        <dt class="col-sm-3">Price:</dt>
+                        <dd class="col-sm-9">@($"{package.PackagePrice} €")</dd>
+                    </dl>
+                </div>
             </div>
         </div>
     }

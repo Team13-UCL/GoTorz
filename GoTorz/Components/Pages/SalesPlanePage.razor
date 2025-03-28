@@ -8,6 +8,7 @@
 @rendermode InteractiveServer
 @inject NavigationManager Navigation
 @inject GoTorz.Data.GoTorzContext DbContext
+@using System.Globalization
 
 <h3>Search Flights</h3>
 
@@ -197,7 +198,7 @@ else
 
     private void SelectPlaneOffer(string departure, string arrival, string carrier, string price)
     {
-        if (decimal.TryParse(price, out var parsedPrice))
+        if (decimal.TryParse(price, CultureInfo.InvariantCulture, out var parsedPrice))
         {
             if (DepartureDate.HasValue)
             {

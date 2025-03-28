@@ -8,6 +8,7 @@
 @using GoTorz.Model
 @using Microsoft.AspNetCore.Components
 @rendermode InteractiveServer
+@using System.Globalization
 
 <h3>Select Return Flight</h3>
 
@@ -213,7 +214,7 @@ else
             Logger.LogInformation("Return flight details saved successfully.");
 
             // Navigate to the hotel selection page with the PlaneId and ReturnPlaneID
-            Navigation.NavigateTo($"/SalesHotelPage?PlaneId={planeId}&ReturnPlaneID={returnPlane.ReturnPlaneId}");
+            Navigation.NavigateTo($"/SalesHotelPage?PlaneId={planeId}&ReturnPlaneID={returnPlane.ReturnPlaneId}&FlightPrice={FlightPrice}&ReturnFlightPrice={price}");
         }
         catch (Exception ex)
         {
@@ -224,7 +225,7 @@ else
 
     private void SelectReturnFlight(string departure, string arrival, string carrier, string price)
     {
-        if (decimal.TryParse(price, out var parsedPrice))
+        if (decimal.TryParse(price, CultureInfo.InvariantCulture, out var parsedPrice))
         {
             if (ReturnDate.HasValue)
             {

@@ -1,13 +1,14 @@
-﻿@page "/SalesHotelPage"
-@inject HttpClient Http
-@inject ILogger<SalesHotelPage> Logger
-@inject AmadeusAuthService AmadeusService
-@using System.Text.Json.Serialization;
-@using System.Text.Json
-@using GoTorz.Model
-@rendermode InteractiveServer
-@inject NavigationManager Navigation
-@inject GoTorz.Data.GoTorzContext DbContext
+﻿    @page "/SalesHotelPage"
+    @inject HttpClient Http
+    @inject ILogger<SalesHotelPage> Logger
+    @inject AmadeusAuthService AmadeusService
+    @using System.Text.Json.Serialization;
+    @using System.Text.Json
+    @using GoTorz.Model
+    @rendermode InteractiveServer
+    @inject NavigationManager Navigation
+    @inject GoTorz.Data.GoTorzContext DbContext
+    @using System.Globalization
 
 <h3>Search Hotels</h3>
 
@@ -17,7 +18,7 @@
 }
 else
 {
-    @inject NavigationManager Navigation
+        @inject NavigationManager Navigation
 
     <div class="container my-5">
         <div class="row justify-content-center">
@@ -200,6 +201,14 @@ else
     [SupplyParameterFromQuery]
     public int ReturnPlaneID { get; set; }
 
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public decimal FlightPrice { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public decimal ReturnFlightPrice { get; set; }
+
     // Fetch the Access Token when the page loads
     protected override async Task OnInitializedAsync()
     {
@@ -296,11 +305,11 @@ else
 
     private void SelectRoom(Offer offer, string name, string price)
     {
-        if (decimal.TryParse(price, out var parsedPrice))
+        if (decimal.TryParse(price, CultureInfo.InvariantCulture, out var parsedPrice))
         {
             if (CheckInDate.HasValue)
             {
-                SaveHotelDetails(name, parsedPrice, CheckInDate.Value, CheckOutDate.Value, PlaneId, ReturnPlaneID);
+                SaveHotelDetails(name, parsedPrice, CheckInDate.Value, CheckOutDate.Value, PlaneId, ReturnPlaneID, FlightPrice, ReturnFlightPrice);
                 Navigation.NavigateTo("/packages");
             }
             else
@@ -314,7 +323,7 @@ else
         }
     }
 
-    private async Task SaveHotelDetails(string name, decimal price, DateTime checkInDate, DateTime checkOutDate, int planeId, int returnPlaneId)
+    private async Task SaveHotelDetails(string name, decimal price, DateTime checkInDate, DateTime checkOutDate, int planeId, int returnPlaneId, decimal flightPrice, decimal returnFlightPrice)
     {
         try
         {
@@ -329,11 +338,14 @@ else
             DbContext.Hotels.Add(hotel);
             await DbContext.SaveChangesAsync();
 
+            var packagePrice = flightPrice / 100 + returnFlightPrice / 100 + price;
+
             var package = new Package
                 {
                     PlaneId = planeId,
                     HotelId = hotel.HotelID,
-                    ReturnPlaneID = returnPlaneId
+                    ReturnPlaneID = returnPlaneId,
+                    PackagePrice = packagePrice
                 };
 
             DbContext.Package.Add(package);
@@ -347,6 +359,4 @@ else
             ErrorMessage = $"Error: {ex.Message}";
         }
     }
-
-
-}
+    }

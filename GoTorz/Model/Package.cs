@@ -8,6 +8,8 @@ namespace GoTorz.Model
         public int HotelId { get; set; }
         public int ReturnPlaneID { get; set; }
 
+        public decimal? PackagePrice { get; set; }
+
         [ForeignKey("PlaneId")]
         public Plane Plane { get; set; } = default!;
 

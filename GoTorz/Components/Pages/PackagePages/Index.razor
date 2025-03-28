@@ -1,10 +1,10 @@
-﻿@page "/packages"
-@using Microsoft.EntityFrameworkCore
-@using Microsoft.AspNetCore.Components.QuickGrid
-@using GoTorz.Model
-@using GoTorz.Data
-@implements IAsyncDisposable
-@inject IDbContextFactory<GoTorz.Data.GoTorzContext> DbFactory
+﻿    @page "/packages"
+    @using Microsoft.EntityFrameworkCore
+    @using Microsoft.AspNetCore.Components.QuickGrid
+    @using GoTorz.Model
+    @using GoTorz.Data
+    @implements IAsyncDisposable
+    @inject IDbContextFactory<GoTorz.Data.GoTorzContext> DbFactory
 
 <PageTitle>Travel Packages</PageTitle>
 
@@ -23,6 +23,7 @@
                         <th><i class="fas fa-calendar-alt"></i> Start Date</th>
                         <th><i class="fas fa-map-marker-alt"></i> Destination Airport</th>
                         <th><i class="fas fa-map-marker-alt"></i> Departure Airport</th>
+                        <th><i class="fas fa-dollar-sign"></i> Package Price</th> 
                         <th><i class="fas fa-cog"></i> Actions</th>
                     </tr>
                 </thead>
@@ -36,6 +37,7 @@
                             <td>@package.Plane.StartDate.ToString("yyyy-MM-dd")</td>
                             <td>@package.Plane.ArrivalAirport</td>
                             <td>@package.Plane.DepartureAirport</td>
+                            <td>@($"{package.PackagePrice} €")</td>
                             <td>
                                 <a href="@($"packages/edit?planeid={package.PlaneId}")" class="btn btn-sm btn-warning">
                                     <i class="fas fa-edit"></i> Edit
@@ -72,4 +74,4 @@
     }
 
     public async ValueTask DisposeAsync() => await context.DisposeAsync();
-}
+    }
