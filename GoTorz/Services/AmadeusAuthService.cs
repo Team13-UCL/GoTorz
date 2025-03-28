@@ -1,6 +1,13 @@
-﻿using System.Text.Json;
+﻿using Microsoft.Data.SqlClient;
+using System.Collections.Generic;
+using System.Data;
+using System.Threading.Tasks;
+using GoTorz.Model;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Net.Http.Headers;
+
+
 
 public class AmadeusAuthService
 {
@@ -8,6 +15,7 @@ public class AmadeusAuthService
     private readonly string _apiKey;
     private readonly string _apiSecret;
     private readonly string _tokenUrl = "https://test.api.amadeus.com/v1/security/oauth2/token";
+
     private string _accessToken;
     private DateTime _tokenExpiration;
 
@@ -67,7 +75,44 @@ public class AmadeusAuthService
             throw new HttpRequestException($"Failed to fetch flights: {response.ReasonPhrase}");
         }
     }
+    public async Task<string> SearchHotelsAsync(string cityCode)
+    {
+        string accessToken = await GetAccessTokenAsync();
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        string apiUrl = $"https://test.api.amadeus.com/v1/reference-data/locations/hotels/by-city?cityCode={cityCode}";
+
+        var response = await _httpClient.GetAsync(apiUrl);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return await response.Content.ReadAsStringAsync();
+        }
+        else
+        {
+            throw new HttpRequestException($"Failed to fetch hotels: {response.ReasonPhrase}");
+        }
+    }
+    public async Task<string> SearchHotelOffersAsync(string hotelIds, string checkInDate, string checkOutDate, int adults = 1)
+    {
+        string accessToken = await GetAccessTokenAsync();
+        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+
+        string apiUrl = $"https://test.api.amadeus.com/v3/shopping/hotel-offers?hotelIds={hotelIds}&adults={adults}&checkInDate={checkInDate}&checkOutDate={checkOutDate}";
+
+        var response = await _httpClient.GetAsync(apiUrl);
+        if (response.IsSuccessStatusCode)
+        {
+            return await response.Content.ReadAsStringAsync();
+        }
+        else
+        {
+            throw new HttpRequestException($"Failed to fetch hotel offers: {response.ReasonPhrase}");
+        }
+    }
 }
+
+
 
 public class AmadeusTokenResponse
 {

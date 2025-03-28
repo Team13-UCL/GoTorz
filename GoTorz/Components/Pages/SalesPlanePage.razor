@@ -1,0 +1,217 @@
+﻿@page "/SalesPlanePage"
+@inject HttpClient Http
+@inject ILogger<SalesPlanePage> Logger
+@inject AmadeusAuthService AmadeusService
+@using System.Text.Json.Serialization
+@using System.Text.Json
+@using GoTorz.Model
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject GoTorz.Data.GoTorzContext DbContext
+
+<h3>Search Flights</h3>
+
+@if (string.IsNullOrEmpty(AccessToken))
+{
+    <p>Fetching access token...</p>
+}
+else
+{
+    <div class="container my-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="card shadow-lg">
+                    <div class="card-body">
+                        <h3 class="text-center mb-4"><i class="fas fa-plane-departure"></i> Find Your Flight</h3>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-plane"></i> Origin Airport Code:</label>
+                            <input @bind="Origin" placeholder="e.g. JFK" class="form-control" />
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <label><i class="fas fa-plane-arrival"></i> Destination Airport Code:</label>
+                            <input @bind="Destination" placeholder="e.g. LAX" class="form-control" />
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <label><i class="fas fa-calendar-alt"></i> Departure Date:</label>
+                            <input type="date" @bind="DepartureDate" class="form-control" />
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <button @onclick="FetchFlights" class="btn btn-primary w-100">
+                                <i class="fas fa-search"></i> Search Flights
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (IsLoading)
+        {
+            <div class="text-center mt-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p>Searching for flights...</p>
+            </div>
+        }
+        else if (FlightResults != null && FlightResults.Count > 0)
+        {
+            <div class="mt-5">
+                <h4 class="text-center"><i class="fas fa-list"></i> Available Flights</h4>
+                <div class="table-responsive">
+                    <table class="table table-hover mt-3 shadow-sm">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Flight ID</th>
+                                <th>Departure</th>
+                                <th>Arrival</th>
+                                <th>Carrier</th>
+                                <th>Price</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var flight in FlightResults)
+                            {
+                                @foreach (var itinerary in flight.Itineraries)
+                                {
+                                    @foreach (var segment in itinerary.Segments)
+                                    {
+                                        <tr>
+                                            <td>@flight.Id</td>
+                                            <td>@segment.Departure.IataCode <br /><small class="text-muted">@segment.Departure.At</small></td>
+                                            <td>@segment.Arrival.IataCode <br /><small class="text-muted">@segment.Arrival.At</small></td>
+                                            <td>@segment.CarrierCode @segment.FlightNumber</td>
+                                            <td><strong>@flight.Price.Currency @flight.Price.Total</strong></td>
+                                            <td>
+                                                <button @onclick="() => SelectPlaneOffer(segment.Departure.IataCode, segment.Arrival.IataCode, segment.CarrierCode + segment.FlightNumber, flight.Price.Total)"
+                                                        class="btn btn-sm btn-success">
+                                                    <i class="fas fa-check-circle"></i> Select
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="alert alert-danger text-center mt-4">
+                <i class="fas fa-exclamation-triangle"></i> @ErrorMessage
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private string Origin = "";
+    private string Destination = "";
+    private DateTime? DepartureDate = null;
+    private List<Flight> FlightResults = new();
+    private string ErrorMessage = "";
+    private bool IsLoading = false;
+    private string AccessToken = "";
+
+    // Fetch the Access Token when the page loads
+    protected override async Task OnInitializedAsync()
+    {
+        AccessToken = await AmadeusService.GetAccessTokenAsync();
+    }
+
+    private async Task FetchFlights()
+    {
+        IsLoading = true;
+        ErrorMessage = "";
+        FlightResults.Clear();
+        Logger.LogInformation("klikket");
+
+        try
+        {
+            if (DepartureDate.HasValue)
+            {
+                string departureDateString = DepartureDate.Value.ToString("yyyy-MM-dd");
+                var response = await AmadeusService.SearchFlightsAsync(Origin, Destination, departureDateString);
+                Logger.LogInformation("JSON Response: {response}", response); // Log the JSON response
+
+                var jsonDocument = JsonDocument.Parse(response);
+                var flightData = jsonDocument.RootElement.GetProperty("data").GetRawText();
+                FlightResults = JsonSerializer.Deserialize<List<Flight>>(flightData);
+
+                Logger.LogInformation("Flights fetched successfully.");
+            }
+            else
+            {
+                ErrorMessage = "Please select a valid departure date.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error: {ex.Message}";
+            Logger.LogError(ex, "Error fetching flights.");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task SaveFlightDetails(string departure, string arrival, string carrier, decimal price, DateTime startDate)
+    {
+        try
+        {
+            var plane = new Plane
+                {
+                    DepartureAirport = departure,
+                    ArrivalAirport = arrival,
+                    CarrierCode = carrier,
+                    Price = price,
+                    StartDate = startDate
+                };
+
+            DbContext.Plane.Add(plane);
+            await DbContext.SaveChangesAsync();
+
+            Logger.LogInformation("Flight details saved successfully.");
+
+			// Navigate to the return flight selection page with the PlaneId, we do this to avoid passing the entire Plane object and avoid serialization issues, 
+			// hvis der er et mellemrum eller andet som ikke må være i url så kan det give problemer
+            var departureEncoded = Uri.EscapeDataString(departure);
+            var arrivalEncoded = Uri.EscapeDataString(arrival);
+            var carrierEncoded = Uri.EscapeDataString(carrier);
+            var startDateStr = startDate.ToString("yyyy-MM-dd");
+
+            Navigation.NavigateTo($"/SalesReturnPlane?DepartureAirport={departureEncoded}&ArrivalAirport={arrivalEncoded}&Carrier={carrierEncoded}&FlightPrice={price}&StartDate={startDateStr}&PlaneId={plane.PlaneId}");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving flight details.");
+            ErrorMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private void SelectPlaneOffer(string departure, string arrival, string carrier, string price)
+    {
+        if (decimal.TryParse(price, out var parsedPrice))
+        {
+            if (DepartureDate.HasValue)
+            {
+                // Save the details to the database first
+                SaveFlightDetails(departure, arrival, carrier, parsedPrice, DepartureDate.Value);
+            }
+            else
+            {
+                ErrorMessage = "Please select a valid departure date.";
+            }
+        }
+        else
+        {
+            ErrorMessage = "Invalid price format.";
+        }
+    }
+}

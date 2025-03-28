@@ -1,0 +1,148 @@
+﻿@page "/packages/edit"
+@using Microsoft.EntityFrameworkCore
+@using GoTorz.Model
+@inject IDbContextFactory<GoTorz.Data.GoTorzContext> DbFactory
+@inject NavigationManager NavigationManager
+
+<PageTitle>Edit Package</PageTitle>
+
+<div class="container mt-5">
+    <h1 class="text-center"><i class="fas fa-edit"></i> Edit Package</h1>
+    <hr />
+
+    @if (Package is null)
+    {
+        <div class="text-center mt-4">
+            <p><em>Loading package details...</em></p>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm p-4">
+            <EditForm method="post" Model="Package" OnValidSubmit="UpdatePackage">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="alert alert-danger" role="alert" />
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h4><i class="fas fa-plane"></i> Flight Details</h4>
+                        <div class="form-group">
+                            <label>Start Date</label>
+                            <InputDate class="form-control" @bind-Value="Package.Plane.StartDate" />
+                        </div>
+                        <div class="form-group">
+                            <label>Departure Airport</label>
+                            <InputText class="form-control" @bind-Value="Package.Plane.DepartureAirport" />
+                        </div>
+                        <div class="form-group">
+                            <label>Arrival Airport</label>
+                            <InputText class="form-control" @bind-Value="Package.Plane.ArrivalAirport" />
+                        </div>
+                        <div class="form-group">
+                            <label>Carrier Code</label>
+                            <InputText class="form-control" @bind-Value="Package.Plane.CarrierCode" />
+                        </div>
+                        <div class="form-group">
+                            <label>Price</label>
+                            <InputNumber class="form-control" @bind-Value="Package.Plane.Price" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <h4><i class="fas fa-plane-arrival"></i> Return Flight</h4>
+                        <div class="form-group">
+                            <label>Return Date</label>
+                            <InputDate class="form-control" @bind-Value="Package.ReturnPlane.ReturnDate" />
+                        </div>
+                        <div class="form-group">
+                            <label>Return Duration</label>
+                            <InputNumber class="form-control" @bind-Value="Package.ReturnPlane.Duration" />
+                        </div>
+                    </div>
+
+                    <div class="col-md-12">
+                        <h4 class="mt-3"><i class="fas fa-hotel"></i> Hotel Details</h4>
+                        <div class="form-group">
+                            <label>Hotel Name</label>
+                            <InputText class="form-control" @bind-Value="Package.Hotels.Name" />
+                        </div>
+                        <div class="form-group">
+                            <label>Hotel Price</label>
+                            <InputNumber class="form-control" @bind-Value="Package.Hotels.Price" />
+                        </div>
+                        <div class="form-group">
+                            <label>Check-In Date</label>
+                            <InputDate class="form-control" @bind-Value="Package.Hotels.CheckInDate" />
+                        </div>
+                        <div class="form-group">
+                            <label>Check-Out Date</label>
+                            <InputDate class="form-control" @bind-Value="Package.Hotels.CheckOutDate" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-between">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save
+                    </button>
+                    <a href="/packages" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to List
+                    </a>
+                </div>
+            </EditForm>
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    private int PlaneId { get; set; }
+
+    [SupplyParameterFromForm]
+    private Package? Package { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        using var context = DbFactory.CreateDbContext();
+        Package ??= await context.Package
+            .Include(p => p.Plane)
+            .Include(p => p.ReturnPlane)
+            .Include(p => p.Hotels)
+            .FirstOrDefaultAsync(m => m.PlaneId == PlaneId);
+
+        if (Package is null)
+        {
+            NavigationManager.NavigateTo("notfound");
+        }
+    }
+
+    private async Task UpdatePackage()
+    {
+        using var context = DbFactory.CreateDbContext();
+        context.Attach(Package!).State = EntityState.Modified;
+
+        try
+        {
+            await context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!PackageExists(Package!.PlaneId))
+            {
+                NavigationManager.NavigateTo("notfound");
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        NavigationManager.NavigateTo("/packages");
+    }
+
+    private bool PackageExists(int planeid)
+    {
+        using var context = DbFactory.CreateDbContext();
+        return context.Package.Any(e => e.PlaneId == planeid);
+    }
+}

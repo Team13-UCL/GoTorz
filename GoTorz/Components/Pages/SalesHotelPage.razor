@@ -1,0 +1,352 @@
+﻿@page "/SalesHotelPage"
+@inject HttpClient Http
+@inject ILogger<SalesHotelPage> Logger
+@inject AmadeusAuthService AmadeusService
+@using System.Text.Json.Serialization;
+@using System.Text.Json
+@using GoTorz.Model
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject GoTorz.Data.GoTorzContext DbContext
+
+<h3>Search Hotels</h3>
+
+@if (string.IsNullOrEmpty(AccessToken))
+{
+    <p>Fetching access token...</p>
+}
+else
+{
+    @inject NavigationManager Navigation
+
+    <div class="container my-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-6 col-md-8">
+                <div class="card shadow-lg">
+                    <div class="card-body">
+                        <h3 class="text-center mb-4"><i class="fas fa-hotel"></i> Find Your Hotel</h3>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-map-marker-alt"></i> City Code:</label>
+                            <input @bind="CityCode" placeholder="e.g. NYC" class="form-control" />
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <label><i class="fas fa-calendar-check"></i> Check-in Date:</label>
+                            <input type="date" @bind="CheckInDate" class="form-control" />
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <label><i class="fas fa-calendar-times"></i> Check-out Date:</label>
+                            <input type="date" @bind="CheckOutDate" class="form-control" />
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <label><i class="fas fa-user-friends"></i> Adults:</label>
+                            <input type="number" @bind="Adults" min="1" max="9" class="form-control" />
+                        </div>
+
+                        <div class="text-center mt-4">
+                            <button @onclick="FetchHotelsWithPricing" class="btn btn-primary w-100">
+                                <i class="fas fa-search"></i> Search Hotels
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (IsLoading)
+        {
+            <div class="text-center mt-4">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p>Searching for hotels...</p>
+            </div>
+        }
+        else if (HotelOffers != null && HotelOffers.Count > 0)
+        {
+            <div class="mt-5">
+                <h4 class="text-center"><i class="fas fa-bed"></i> Hotel Results</h4>
+                <div class="table-responsive">
+                    <table class="table table-hover mt-3 shadow-sm">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Hotel Name</th>
+                                <th>City Code</th>
+                                <th>Price</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var hotelOffer in HotelOffers)
+                            {
+                                <tr>
+                                    <td>@hotelOffer.Hotel.Name</td>
+                                    <td>@hotelOffer.Hotel.CityCode</td>
+                                    <td>
+                                        @if (hotelOffer.Offers != null && hotelOffer.Offers.Count > 0)
+                                        {
+                                            <strong>@hotelOffer.Offers[0].Price.Total @hotelOffer.Offers[0].Price.Currency</strong>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">No price available</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <button @onclick="() => SelectHotelOffer(hotelOffer)" class="btn btn-sm btn-success">
+                                            <i class="fas fa-check-circle"></i> Select
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="alert alert-danger text-center mt-4">
+                <i class="fas fa-exclamation-triangle"></i> @ErrorMessage
+            </div>
+        }
+
+        @if (SelectedHotel != null)
+        {
+            <div class="mt-5">
+                <h4 class="text-center"><i class="fas fa-building"></i> Selected Hotel</h4>
+                <div class="card shadow-lg">
+                    <div class="card-header text-white bg-dark">
+                        <h5>@SelectedHotel.Hotel.Name</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong><i class="fas fa-calendar-alt"></i> Dates:</strong> @CheckInDate?.ToString("yyyy-MM-dd") to @CheckOutDate?.ToString("yyyy-MM-dd")</p>
+                        <p><strong><i class="fas fa-bed"></i> Room Options:</strong></p>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover mt-3 shadow-sm">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Room Type</th>
+                                        <th>Price</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var offer in SelectedHotel.Offers)
+                                    {
+                                        <tr>
+                                            <td>@(offer.Room?.TypeEstimated?.Category ?? "Standard")</td>
+                                            <td><strong>@offer.Price.Total @offer.Price.Currency</strong></td>
+                                            <td>
+                                                <button @onclick="() => SelectRoom(offer, SelectedHotel.Hotel.Name, offer.Price.Total)" class="btn btn-sm btn-info">
+                                                    <i class="fas fa-check-circle"></i> Book
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (SelectedOffer != null)
+        {
+            <div class="mt-5">
+                <h4 class="text-center"><i class="fas fa-receipt"></i> Booking Summary</h4>
+                <div class="card shadow-lg">
+                    <div class="card-header text-white bg-success">
+                        <h5>@SelectedHotel.Hotel.Name</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong><i class="fas fa-calendar-alt"></i> Dates:</strong> @CheckInDate?.ToString("yyyy-MM-dd") to @CheckOutDate?.ToString("yyyy-MM-dd")</p>
+                        <p><strong><i class="fas fa-bed"></i> Room Type:</strong> @(SelectedOffer.Room?.TypeEstimated?.Category ?? "Standard")</p>
+                        <p><strong><i class="fas fa-dollar-sign"></i> Price:</strong> @SelectedOffer.Price.Total @SelectedOffer.Price.Currency</p>
+                        <p><strong><i class="fas fa-info-circle"></i> Description:</strong> @(SelectedOffer.Room?.Description?.Text ?? "No description available")</p>
+
+                        <div class="text-center mt-4">
+                            <button class="btn btn-success w-100">
+                                <i class="fas fa-check"></i> Confirm Booking
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private string CityCode = "";
+    private DateTime? CheckInDate = DateTime.Today.AddDays(1);
+    private DateTime? CheckOutDate = DateTime.Today.AddDays(3);
+    private int Adults = 1;
+    private List<HotelOfferData> HotelOffers = new();
+    private string ErrorMessage = "";
+    private bool IsLoading = false;
+    private string AccessToken = "";
+    private HotelOfferData SelectedHotel = null;
+    private Offer SelectedOffer = null;
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public int PlaneId { get; set; }
+
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public int ReturnPlaneID { get; set; }
+
+    // Fetch the Access Token when the page loads
+    protected override async Task OnInitializedAsync()
+    {
+        AccessToken = await AmadeusService.GetAccessTokenAsync();
+    }
+
+    private async Task FetchHotelsWithPricing()
+    {
+        if (string.IsNullOrWhiteSpace(CityCode))
+        {
+            ErrorMessage = "Please enter a city code.";
+            return;
+        }
+
+        if (!CheckInDate.HasValue || !CheckOutDate.HasValue)
+        {
+            ErrorMessage = "Please select valid check-in and check-out dates.";
+            return;
+        }
+
+        if (CheckInDate >= CheckOutDate)
+        {
+            ErrorMessage = "Check-out date must be after check-in date.";
+            return;
+        }
+
+        IsLoading = true;
+        ErrorMessage = "";
+        HotelOffers.Clear();
+        SelectedHotel = null;
+        SelectedOffer = null;
+
+        Logger.LogInformation("Hotel search initiated for city: {CityCode}", CityCode);
+
+        try
+        {
+            // Step 1: Get list of hotels
+            var hotelResponse = await AmadeusService.SearchHotelsAsync(CityCode);
+            var hotels = JsonSerializer.Deserialize<HotelResponse>(hotelResponse)?.Data;
+
+            if (hotels == null || hotels.Count == 0)
+            {
+                ErrorMessage = "No hotels found for the specified city code.";
+                IsLoading = false;
+                return;
+            }
+
+            Logger.LogInformation("{HotelCount} hotels found", hotels.Count);
+
+            // Step 2: Get pricing info for hotels (limit to 10 hotels to avoid API overload)
+            var hotelsToQuery = hotels.Take(10).ToList(); // Adjust the limit as needed
+            string hotelIds = string.Join(",", hotelsToQuery.Select(h => h.Id));
+
+            string checkInDateString = CheckInDate.Value.ToString("yyyy-MM-dd");
+            string checkOutDateString = CheckOutDate.Value.ToString("yyyy-MM-dd");
+
+            Logger.LogInformation("Fetching offers for hotels: {HotelIds}, CheckInDate: {CheckInDate}, CheckOutDate: {CheckOutDate}, Adults: {Adults}",
+                hotelIds, checkInDateString, checkOutDateString, Adults);
+
+            var offersResponse = await AmadeusService.SearchHotelOffersAsync(hotelIds, checkInDateString, checkOutDateString, Adults);
+            var offerData = JsonSerializer.Deserialize<HotelOfferResponse>(offersResponse)?.Data;
+
+            if (offerData == null || offerData.Count == 0)
+            {
+                ErrorMessage = "No offers available for the selected dates.";
+                IsLoading = false;
+                return;
+            }
+
+            // Filter out hotels with no offers
+            HotelOffers = offerData.Where(h => h.Offers != null && h.Offers.Count > 0).ToList();
+
+            if (HotelOffers.Count == 0)
+            {
+                ErrorMessage = "No valid offers available for the selected dates.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error: {ex.Message}";
+            Logger.LogError(ex, "Error fetching hotels for {CityCode}", CityCode);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void SelectHotelOffer(HotelOfferData hotel)
+    {
+        SelectedHotel = hotel;
+        SelectedOffer = null;
+    }
+
+    private void SelectRoom(Offer offer, string name, string price)
+    {
+        if (decimal.TryParse(price, out var parsedPrice))
+        {
+            if (CheckInDate.HasValue)
+            {
+                SaveHotelDetails(name, parsedPrice, CheckInDate.Value, CheckOutDate.Value, PlaneId, ReturnPlaneID);
+                Navigation.NavigateTo("/packages");
+            }
+            else
+            {
+                ErrorMessage = "Please select a valid check-in date.";
+            }
+        }
+        else
+        {
+            ErrorMessage = "Invalid price format.";
+        }
+    }
+
+    private async Task SaveHotelDetails(string name, decimal price, DateTime checkInDate, DateTime checkOutDate, int planeId, int returnPlaneId)
+    {
+        try
+        {
+            var hotel = new Hotels
+                {
+                    Name = name,
+                    Price = price,
+                    CheckInDate = DateOnly.FromDateTime(checkInDate),
+                    CheckOutDate = DateOnly.FromDateTime(checkOutDate)
+                };
+
+            DbContext.Hotels.Add(hotel);
+            await DbContext.SaveChangesAsync();
+
+            var package = new Package
+                {
+                    PlaneId = planeId,
+                    HotelId = hotel.HotelID,
+                    ReturnPlaneID = returnPlaneId
+                };
+
+            DbContext.Package.Add(package);
+            await DbContext.SaveChangesAsync();
+
+            Logger.LogInformation("Hotel and package details saved successfully.");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving hotel and package details.");
+            ErrorMessage = $"Error: {ex.Message}";
+        }
+    }
+
+
+}

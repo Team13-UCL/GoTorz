@@ -1,0 +1,75 @@
+﻿@page "/packages"
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Components.QuickGrid
+@using GoTorz.Model
+@using GoTorz.Data
+@implements IAsyncDisposable
+@inject IDbContextFactory<GoTorz.Data.GoTorzContext> DbFactory
+
+<PageTitle>Travel Packages</PageTitle>
+
+<div class="container mt-5">
+    <h1 class="text-center"><i class="fas fa-box"></i> Travel Packages</h1>
+
+    @if (packages != null && packages.Any())
+    {
+        <div class="table-responsive">
+            <table class="table table-hover mt-4 shadow-sm">
+                <thead class="table-dark">
+                    <tr>
+                        <th><i class="fas fa-plane"></i> Plane ID</th>
+                        <th><i class="fas fa-hotel"></i> Hotel ID</th>
+                        <th><i class="fas fa-plane-departure"></i> Return Plane ID</th>
+                        <th><i class="fas fa-calendar-alt"></i> Start Date</th>
+                        <th><i class="fas fa-map-marker-alt"></i> Destination Airport</th>
+                        <th><i class="fas fa-map-marker-alt"></i> Departure Airport</th>
+                        <th><i class="fas fa-cog"></i> Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var package in packages)
+                    {
+                        <tr>
+                            <td>@package.PlaneId</td>
+                            <td>@package.HotelId</td>
+                            <td>@package.ReturnPlaneID</td>
+                            <td>@package.Plane.StartDate.ToString("yyyy-MM-dd")</td>
+                            <td>@package.Plane.ArrivalAirport</td>
+                            <td>@package.Plane.DepartureAirport</td>
+                            <td>
+                                <a href="@($"packages/edit?planeid={package.PlaneId}")" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <a href="@($"packages/details?planeid={package.PlaneId}")" class="btn btn-sm btn-info">
+                                    <i class="fas fa-info-circle"></i> Details
+                                </a>
+                                <a href="@($"packages/delete?planeid={package.PlaneId}")" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i> Delete
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info text-center mt-4">
+            <i class="fas fa-exclamation-circle"></i> No travel packages available.
+        </div>
+    }
+</div>
+
+@code {
+    private GoTorzContext context = default!;
+    private IQueryable<Package> packages = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        context = DbFactory.CreateDbContext();
+        packages = context.Package.Include(p => p.Plane).AsQueryable();
+    }
+
+    public async ValueTask DisposeAsync() => await context.DisposeAsync();
+}
