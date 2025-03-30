@@ -17,14 +17,6 @@
         <p><em>Loading...</em></p>
     }
     else {
-        <dl class="row">
-            <dt class="col-sm-2">PlaneId</dt>
-            <dd class="col-sm-10">@package.PlaneId</dd>
-        </dl>
-        <dl class="row">
-            <dt class="col-sm-2">HotelId</dt>
-            <dd class="col-sm-10">@package.HotelId</dd>
-        </dl>
         <EditForm method="post" Model="package" OnValidSubmit="DeletePackage" FormName="delete" Enhance>
             <button type="submit" class="btn btn-danger" disabled="@(package is null)">Delete</button> |
             <a href="/packages">Back to List</a>
@@ -36,12 +28,12 @@
     private Package? package;
 
     [SupplyParameterFromQuery]
-    private int PackageId { get; set; }
+    private int PlaneId { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         using var context = DbFactory.CreateDbContext();
-        package = await context.Package.FirstOrDefaultAsync(m => m.PackageId == PackageId);
+        package = await context.Package.FirstOrDefaultAsync(m => m.PlaneId == PlaneId);
 
         if (package is null)
         {

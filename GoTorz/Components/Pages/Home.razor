@@ -9,18 +9,7 @@
 
 Welcome to your new app.
 
-<ul>
-    @foreach (var package in packages)
-    {
-        <li>Package ID: @package.PackageId, Plane ID: @package.PlaneId, Hotel ID: @package.HotelId</li>
-    }
-</ul>
 
 @code {
-    private List<Package> packages = new();
-
-    // protected override async Task OnInitializedAsync()
-    // {
-    //     packages = await DbContext.Package.ToListAsync();
-    // }
+   
 }
