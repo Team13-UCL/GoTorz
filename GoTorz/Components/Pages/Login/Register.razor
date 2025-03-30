@@ -1,0 +1,86 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using GoTorz.Components.Shared
+@using GoTorz.Data
+
+@*Makes the component accessible at /Register*@
+@page "/Register"
+
+@inject UserService userService
+@rendermode InteractiveServer
+
+<h1>Register</h1>
+<div class="row">
+    <div class="col-md-4">
+        <Alert @ref="alert" />
+        <section>
+            @*Editform is a blazor component that binds to a model in this case ''Input'' Model=Imput binds the form to the imput object and OnValidSubmit=RegisterUser triggers when it's valid*@
+            <EditForm Model="Input" method="post" OnValidSubmit="RegisterUser" FormName="Register">
+                <DataAnnotationsValidator />
+                <hr />
+                <div class="form-floating mb-3">
+                    @*@Bind-Value/Email binds the user imput onmto the email property*@
+                    <InputText @bind-Value="Input.Email" class="form-control" aria-required="true" />
+                    <label for="email" class="form-label">Email</label>
+                    @*The ValidationMessage displays an error message if the email is invalid*@
+                    <ValidationMessage For="() => Input.Email" class="text-danger" />
+                </div>
+                <div class="form-floating mb-3">
+                    @*Similar to email but this hides the imput because of Password*@
+                    <InputText type="password" @bind-Value="Input.Password" class="form-control" aria-required="true" />
+                    <label for="password" class="form-label">Password</label>
+                    <ValidationMessage For="() => Input.Password" class="text-danger" />
+                </div>
+                <div>
+                    @*A simple button to submit the form*@
+                    <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
+                </div>
+            </EditForm>
+        </section>
+    </div>
+</div>
+
+@code {
+    private Alert alert;
+
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    public void RegisterUser()
+    {
+        bool result = userService.SaveUser(
+            new User
+            {
+                Email = Input.Email,
+                Password = Input.Password,
+                Role = "Customer"
+            }
+        );
+
+        if (result)
+        {
+            //Register success
+            alert.ShowSuccess("Register Successfully");
+        }
+        else
+        {
+            //register failed
+            alert.ShowFailed("Register Failed");
+        }
+    }
+
+    // [Required] Field must be filled. [EmailAddress]: Ensures a valid email format. 
+    // [DataType(DataType.Password)]: Makes sure that Password is treated as a Password
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        public string Role { get; set; } = "Customer"; // This makes the Default role for user assigned automatically.
+    }
+}

@@ -1,14 +1,34 @@
 using GoTorz.Components;
-
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using GoTorz.Data;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using GoTorz.Components.Middleware;
+
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.AddDbContextFactory<GoTorzContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("GoTorzContext") ?? throw new InvalidOperationException("Connection string 'GoTorzContext' not found.")));
+
+builder.Services.AddDbContextFactory<AuthContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("GoTorzContext") ?? throw new InvalidOperationException("Connection string 'GoTorzContext' not found.")));
+
+
 builder.Services.AddHttpClient();
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://test.api.amadeus.com/") });
+
+// login authentication and path ways if the login should fail, or we want to denide access to certain parts
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie( options =>
+    {
+        options.LoginPath = "/login";
+        options.AccessDeniedPath = "/accessdenied";
+    });
+
+builder.Services.AddScoped<UserService>();
+
+builder.Services.AddAuthentication();
 
 builder.Services.AddScoped<AmadeusAuthService>();
 builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
@@ -20,6 +40,8 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+
 
 //// Register the PackageService with the connection string
 //builder.Services.AddSingleton(new PackageService(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -40,8 +62,14 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// HTTP Authentication, it automatically checks if the user has a valid login-cookie
+app.UseAuthentication();
+// Controlles if the user has the rights to access to different pages
+app.UseAuthorization();
+
 app.UseStaticFiles();
 app.UseAntiforgery();
+app.UseMiddleware<AuthMiddleware>();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

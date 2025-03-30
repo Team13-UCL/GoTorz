@@ -10,13 +10,14 @@ namespace GoTorz.Data
 {
     public class GoTorzContext : DbContext
     {
-        public GoTorzContext (DbContextOptions<GoTorzContext> options)
+        public GoTorzContext(DbContextOptions<GoTorzContext> options)
             : base(options)
         {
         }
 
         public DbSet<Package> Package { get; set; } = default!;
         public DbSet<Plane> Plane { get; set; } = default!;
+        public DbSet<User> User { get; set; } = default!;
 
     }
 }

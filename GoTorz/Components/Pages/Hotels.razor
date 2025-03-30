@@ -1,0 +1,22 @@
+﻿@page "/hotels"
+@inject GoTorz.Services.HotelService HotelService
+
+<h3>Hotel Exchange Rates</h3>
+
+@if (exchangeRates == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <pre>@exchangeRates</pre>
+}
+
+@code {
+    private string exchangeRates;
+
+    protected override async Task OnInitializedAsync()
+    {
+        exchangeRates = await HotelService.GetExchangeRatesAsync();
+    }
+}
