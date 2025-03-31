@@ -4,12 +4,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using GoTorz.Model;
+using static GoTorz.Components.Pages.SalesPlanePage;
 
 namespace GoTorz.Data
 {
     public class GoTorzContext : DbContext
     {
-        public GoTorzContext (DbContextOptions<GoTorzContext> options)
+        public GoTorzContext(DbContextOptions<GoTorzContext> options)
             : base(options)
         {
         }
@@ -42,5 +43,6 @@ namespace GoTorz.Data
         public DbSet<Plane> Plane { get; set; } = default!;
         public DbSet<Hotels> Hotels { get; set; } = default!;
         public DbSet<ReturnPlane> ReturnPlane { get; set; } = default!;
+        public DbSet<User> User { get; set; } = default!;
     }
 }

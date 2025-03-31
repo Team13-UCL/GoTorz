@@ -1,4 +1,8 @@
-﻿@inherits LayoutComponentBase
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@inherits LayoutComponentBase
+@inject AuthenticationStateProvider auth
+
 
 <div class="page">
     <div class="sidebar">
@@ -7,7 +11,11 @@
 
     <main>
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            <CascadingAuthenticationState>
+                <AuthorizeView>
+                    Hello @email - @role <a href="/logout">Logout</a>
+                </AuthorizeView>
+            </CascadingAuthenticationState>
         </div>
 
         <article class="content px-4">
@@ -22,3 +30,18 @@
     <a class="dismiss">🗙</a>
 </div>
 
+@code{
+    public string email{ get; set; }
+    public string role { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await auth.GetAuthenticationStateAsync();
+        var user = state.User;
+        if (user.Identity.IsAuthenticated)
+        {
+            email = user.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Name)?.Value;
+            role = user.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Role)?.Value;
+        }
+    }
+}

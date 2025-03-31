@@ -5,6 +5,9 @@
 @using System.Text.Json.Serialization
 @using System.Text.Json
 @using GoTorz.Model
+@using Microsoft.AspNetCore.Authorization
+@attribute [StreamRendering]
+@attribute [Authorize(Roles = "Admin")]
 @rendermode InteractiveServer
 @inject NavigationManager Navigation
 @inject GoTorz.Data.GoTorzContext DbContext

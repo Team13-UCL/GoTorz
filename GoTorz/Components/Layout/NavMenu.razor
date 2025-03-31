@@ -1,4 +1,6 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using Microsoft.AspNetCore.Components.Authorization
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">GoTorz</a>
     </div>
@@ -12,15 +14,68 @@
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                 <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
             </NavLink>
-        </div>    
-
-       
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="SalesPlanePage">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Sales create package
-            </NavLink>
         </div>
-        
+
+        <Microsoft.AspNetCore.Components.Authorization.CascadingAuthenticationState>
+
+            <AuthorizeView>
+                <NotAuthorized> @*This is the view for the unauthorized users*@
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="login">
+                            <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Login
+                        </NavLink>
+                    </div>
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="Register">
+                            <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Register
+                        </NavLink>
+                    </div>
+                </NotAuthorized>
+            </AuthorizeView>
+
+            <AuthorizeView Roles="Admin"> @*Admin view*@
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="SalesPlanePage">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> SalesPlanePage
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="SalesHotelPage">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> SalesHotelPage
+                    </NavLink>
+                </div>
+                @*TLDR ADD EVERYTHING IN HERE, ADMIN NEEDS TO BE ABLE TO SEE EVERYTHING AND ANYTHING*@
+            </AuthorizeView>
+
+
+            @*This is the View for the Sales department*@
+            <AuthorizeView Roles="Sales"> 
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="SalesPlanePage">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> SalesPlanePage
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="SalesHotelPage">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> SalesHotelPage
+                    </NavLink>
+                </div>
+
+            </AuthorizeView>
+
+            <AuthorizeView Roles="Customer"> @*This is the view for the average user/DefaultUser*@
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="SalesPlanePage">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> SalesPlanePage
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="SalesHotelPage">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> SalesHotelPage
+                    </NavLink>
+                </div>
+            </AuthorizeView>
+        </Microsoft.AspNetCore.Components.Authorization.CascadingAuthenticationState>
     </nav>
 </div>
 
