@@ -9,6 +9,10 @@
 @inject NavigationManager Navigation
 @inject GoTorz.Data.GoTorzContext DbContext
 
+@using Microsoft.AspNetCore.Authorization
+@attribute [StreamRendering]
+@attribute [Authorize]
+
 <h3>Search Hotels</h3>
 
 @if (string.IsNullOrEmpty(AccessToken))
