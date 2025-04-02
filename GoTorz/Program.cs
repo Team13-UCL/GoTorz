@@ -11,6 +11,7 @@ using Microsoft.Extensions.DependencyInjection;
 using GoTorz.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using GoTorz.Components.Middleware;
+using GoTorz.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);

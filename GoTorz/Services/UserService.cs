@@ -1,4 +1,7 @@
-﻿namespace GoTorz.Data
+﻿using GoTorz.Data;
+using GoTorz.Model;
+
+namespace GoTorz.Services
 {
    public class UserService
     {

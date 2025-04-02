@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using GoTorz.Model;
 using Microsoft.EntityFrameworkCore;
 
 namespace GoTorz.Data

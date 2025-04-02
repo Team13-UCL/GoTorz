@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace GoTorz.Data
+namespace GoTorz.Model
 {
     public partial class User
     {
