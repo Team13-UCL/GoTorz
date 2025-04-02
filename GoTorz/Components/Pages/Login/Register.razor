@@ -8,6 +8,7 @@
 @*Makes the component accessible at /Register*@
 @page "/Register"
 
+@inject NavigationManager Navigation
 @inject UserService userService
 @rendermode InteractiveServer
 
@@ -80,6 +81,7 @@
         {
             //Register success
             alert.ShowSuccess("Register Successfully");
+            Navigation.NavigateTo("/Login");
         }
         else
         {
