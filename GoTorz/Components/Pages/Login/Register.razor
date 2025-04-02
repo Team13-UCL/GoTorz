@@ -64,7 +64,7 @@
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
 
-    public void RegisterUser()
+    public async void RegisterUser()
     {
         bool result = userService.SaveUser(
             new User
@@ -81,6 +81,7 @@
         {
             //Register success
             alert.ShowSuccess("Register Successfully");
+            await Task.Delay(3000); // Delay for 3 seconds
             Navigation.NavigateTo("/Login");
         }
         else
