@@ -3,6 +3,7 @@
 @using GoTorz.Model
 @inject IDbContextFactory<GoTorz.Data.GoTorzContext> DbFactory
 @inject NavigationManager NavigationManager
+@inject ILogger<PackagePages.Edit> Logger
 
 <PageTitle>Edit Package</PageTitle>
 
@@ -115,6 +116,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Logger.LogInformation($"Initializing with PlaneId: {PlaneId}");
+
         using var context = DbFactory.CreateDbContext();
         Package ??= await context.Package
             .Include(p => p.Plane)
@@ -124,33 +127,144 @@
 
         if (Package is null)
         {
+            Logger.LogWarning($"Package with PlaneId {PlaneId} not found.");
             NavigationManager.NavigateTo("notfound");
+        }
+        else
+        {
+            Logger.LogInformation($"Package with PlaneId {PlaneId} loaded successfully.");
         }
     }
 
     private async Task UpdatePackage()
     {
+        if (Package is null || Package.Plane is null || Package.ReturnPlane is null || Package.Hotels is null)
+        {
+            // Added null checks for related entities as well, as they are used directly
+            Logger.LogError("Package or one of its related entities is null during update attempt.");
+            // Optionally navigate to an error page or show a message
+            NavigationManager.NavigateTo("error"); // Or handle appropriately
+            return;
+        }
+
+        // Ensure the PlaneId from the query parameter is used if the form model somehow lost it
+        // Although binding should handle this, it's a safeguard.
+        // We rely on PlaneId to fetch the correct existing package.
+        if (PlaneId == 0)
+        {
+            Logger.LogError("PlaneId from query parameter is 0. Update cannot proceed.");
+            NavigationManager.NavigateTo("error"); // Or handle appropriately
+            return;
+        }
+
+
+        Logger.LogInformation($"Attempting to update package associated with PlaneId: {PlaneId}");
+
         using var context = DbFactory.CreateDbContext();
-        context.Entry(Package!).State = EntityState.Modified;
+        var existingPackage = await context.Package
+            .Include(p => p.Plane)
+            .Include(p => p.ReturnPlane)
+            .Include(p => p.Hotels)
+            .FirstOrDefaultAsync(m => m.PlaneId == PlaneId); // Use PlaneId from query param for lookup
+
+        if (existingPackage == null)
+        {
+            Logger.LogWarning($"Package with PlaneId {PlaneId} does not exist. Cannot update.");
+            NavigationManager.NavigateTo("notfound");
+            return;
+        }
+
+       
+
+        // 1. Update Package properties (Only non-key properties)
+        // Assuming PackagePrice is the only direct property on Package to update
+        existingPackage.PackagePrice = Package.PackagePrice;
+        // DO NOT update existingPackage.PlaneId or existingPackage.HotelId here.
+
+        // 2. Update Plane properties
+        if (existingPackage.Plane != null && Package.Plane != null)
+        {
+            // Use SetValues IF PlaneId is NOT part of Plane's primary key AND you want all props updated
+            // context.Entry(existingPackage.Plane).CurrentValues.SetValues(Package.Plane);
+            // OR Manual update (safer):
+            existingPackage.Plane.StartDate = Package.Plane.StartDate;
+            existingPackage.Plane.DepartureAirport = Package.Plane.DepartureAirport;
+            existingPackage.Plane.ArrivalAirport = Package.Plane.ArrivalAirport;
+            existingPackage.Plane.CarrierCode = Package.Plane.CarrierCode;
+            existingPackage.Plane.Price = Package.Plane.Price;
+            // DO NOT update existingPackage.Plane.PlaneId 
+        }
+        else
+        {
+            Logger.LogWarning($"Existing or Form Plane entity is null for PlaneId {PlaneId}. Skipping Plane update.");
+        }
+
+        // 3. Update ReturnPlane properties
+        if (existingPackage.ReturnPlane != null && Package.ReturnPlane != null)
+        {
+            // Use SetValues IF ReturnPlaneId/PlaneId is NOT part of ReturnPlane's primary key AND you want all props updated
+            // context.Entry(existingPackage.ReturnPlane).CurrentValues.SetValues(Package.ReturnPlane);
+            // OR Manual update (safer):
+            existingPackage.ReturnPlane.ReturnDate = Package.ReturnPlane.ReturnDate;
+            existingPackage.ReturnPlane.Duration = Package.ReturnPlane.Duration;
+            existingPackage.ReturnPlane.Price = Package.ReturnPlane.Price;
+            // DO NOT update existingPackage.ReturnPlane.ReturnPlaneId or related FKs if they are keys
+        }
+        else
+        {
+            Logger.LogWarning($"Existing or Form ReturnPlane entity is null for PlaneId {PlaneId}. Skipping ReturnPlane update.");
+        }
+
+        // 4. Update Hotel properties
+        if (existingPackage.Hotels != null && Package.Hotels != null)
+        {
+            // Use SetValues IF HotelId is NOT part of Hotel's primary key AND you want all props updated
+            // context.Entry(existingPackage.Hotels).CurrentValues.SetValues(Package.Hotels);
+            // OR Manual update (safer):
+            existingPackage.Hotels.Name = Package.Hotels.Name;
+            existingPackage.Hotels.Price = Package.Hotels.Price;
+            existingPackage.Hotels.CheckInDate = Package.Hotels.CheckInDate;
+            existingPackage.Hotels.CheckOutDate = Package.Hotels.CheckOutDate;
+            // DO NOT update existingPackage.Hotels.HotelId (assuming it's the PK)
+        }
+        else
+        {
+            Logger.LogWarning($"Existing or Form Hotels entity is null for PlaneId {PlaneId}. Skipping Hotel update.");
+        }
+
+        // --- End Selective Update ---
 
         try
         {
-            await context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!PackageExists(Package!.PlaneId))
+            // Ensure the context is tracking changes before saving
+            if (context.ChangeTracker.HasChanges())
             {
-                NavigationManager.NavigateTo("notfound");
+                Logger.LogInformation($"Saving changes for Package associated with PlaneId: {PlaneId}");
+                await context.SaveChangesAsync();
+                Logger.LogInformation($"Successfully saved changes for Package associated with PlaneId: {PlaneId}");
+                NavigationManager.NavigateTo("/packages");
             }
             else
             {
-                throw;
+                Logger.LogInformation($"No changes detected for Package associated with PlaneId: {PlaneId}. Skipping SaveChanges.");
+                NavigationManager.NavigateTo("/packages"); // Still navigate back even if no changes
             }
         }
-
-        NavigationManager.NavigateTo("/packages");
+        catch (DbUpdateConcurrencyException ex)
+        {
+            // Log the exception details, potentially including entity values
+            var entry = ex.Entries.FirstOrDefault();
+            Logger.LogError(ex, "Concurrency exception occurred while updating package with PlaneId {PlaneId}. Entity: {Entity}", PlaneId, entry?.Entity.GetType().Name);            
+            throw; 
+        }
+        catch (Exception ex) // Catch other potential exceptions during save
+        {                      
+            throw; 
+        }
     }
+
+
+
 
     private bool PackageExists(int planeid)
     {
