@@ -329,8 +329,21 @@ else
 
     private async Task SaveHotelDetails(string name, decimal price, DateTime checkInDate, DateTime checkOutDate, int planeId, int returnPlaneId, decimal flightPrice, decimal returnFlightPrice)
     {
+        // Start a database transaction
+        using var transaction = await DbContext.Database.BeginTransactionAsync(); // <--- Start transaction
+
         try
         {
+            // Ensure the Plane entities are tracked by the context
+            var plane = await DbContext.Plane.FindAsync(planeId);
+            var returnPlane = await DbContext.ReturnPlane.FindAsync(returnPlaneId);
+
+            if (plane == null || returnPlane == null)
+            {
+                throw new InvalidOperationException("Plane or ReturnPlane not found.");
+            }
+
+            // 1. Create and save the Hotel
             var hotel = new Hotels
                 {
                     Name = name,
@@ -340,27 +353,47 @@ else
                 };
 
             DbContext.Hotels.Add(hotel);
-            await DbContext.SaveChangesAsync();
+            await DbContext.SaveChangesAsync(); // Save changes within the transaction
 
-            var packagePrice = flightPrice / 100 + returnFlightPrice / 100 + price;
+            // At this point, hotel.HotelID is populated if the save was successful
 
+            // 2. Calculate package price
+            var packagePrice = (flightPrice / 100) + (returnFlightPrice / 100) + price;
+
+            // 3. Create and save the Package
             var package = new Package
                 {
                     PlaneId = planeId,
-                    HotelId = hotel.HotelID,
+                    HotelId = hotel.HotelID, // Use the generated ID
                     ReturnPlaneID = returnPlaneId,
                     PackagePrice = packagePrice
                 };
 
             DbContext.Package.Add(package);
-            await DbContext.SaveChangesAsync();
+            await DbContext.SaveChangesAsync(); // Save changes within the transaction
 
-            Logger.LogInformation("Hotel and package details saved successfully.");
+            // 4. If both SaveChangesAsync succeeded, commit the transaction
+            await transaction.CommitAsync();
+
+            Logger.LogInformation("Hotel and package details saved successfully within a transaction.");
+            ErrorMessage = string.Empty; // Clear any previous error message
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error saving hotel and package details.");
+            // 5. If any error occurred, the transaction will be automatically
+            //    rolled back when 'transaction' is disposed by the 'using' statement.
+            //    You don't strictly *need* transaction.RollbackAsync() here because
+            //    the 'using' block handles it if CommitAsync() isn't reached.
+            //    However, explicit rollback can sometimes be clearer depending on complex logic.
+            //    await transaction.RollbackAsync(); // Optional: Explicit rollback for clarity
+
+            Logger.LogError(ex, "Error saving hotel and package details. Transaction rolled back.");
             ErrorMessage = $"Error: {ex.Message}";
+            // Consider re-throwing the exception if the calling code needs to know about the failure
+            // throw;
         }
+        // The 'using' statement ensures the transaction is disposed correctly,
+        // rolling back if CommitAsync was not called.
     }
-    }
+
+}

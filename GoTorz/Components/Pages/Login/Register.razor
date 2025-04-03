@@ -1,10 +1,14 @@
 ﻿@using System.ComponentModel.DataAnnotations
+@using System.ComponentModel.DataAnnotations.Schema
 @using GoTorz.Components.Shared
 @using GoTorz.Data
+@using GoTorz.Model
+@using GoTorz.Services
 
 @*Makes the component accessible at /Register*@
 @page "/Register"
 
+@inject NavigationManager Navigation
 @inject UserService userService
 @rendermode InteractiveServer
 
@@ -17,6 +21,19 @@
             <EditForm Model="Input" method="post" OnValidSubmit="RegisterUser" FormName="Register">
                 <DataAnnotationsValidator />
                 <hr />
+
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.Name" class="form-control" aria-required="true" />
+                    <label for="fullname" class="form-label">Full Name</label>
+                    <ValidationMessage For="() => Input.Name" class="text-danger" />
+                </div>
+
+                <div class="form-floating mb-3">
+                    <InputText @bind-Value="Input.PhoneNumber" class="form-control" aria-required="true" />
+                    <label for="phone" class="form-label">Phone Number</label>
+                    <ValidationMessage For="() => Input.PhoneNumber" class="text-danger" />
+                </div>
+
                 <div class="form-floating mb-3">
                     @*@Bind-Value/Email binds the user imput onmto the email property*@
                     <InputText @bind-Value="Input.Email" class="form-control" aria-required="true" />
@@ -24,6 +41,7 @@
                     @*The ValidationMessage displays an error message if the email is invalid*@
                     <ValidationMessage For="() => Input.Email" class="text-danger" />
                 </div>
+
                 <div class="form-floating mb-3">
                     @*Similar to email but this hides the imput because of Password*@
                     <InputText type="password" @bind-Value="Input.Password" class="form-control" aria-required="true" />
@@ -46,11 +64,13 @@
     [SupplyParameterFromForm]
     private InputModel Input { get; set; } = new();
 
-    public void RegisterUser()
+    public async void RegisterUser()
     {
         bool result = userService.SaveUser(
             new User
             {
+                Name = Input.Name,
+                PhoneNumber = Input.PhoneNumber,
                 Email = Input.Email,
                 Password = Input.Password,
                 Role = "Customer"
@@ -61,6 +81,8 @@
         {
             //Register success
             alert.ShowSuccess("Register Successfully");
+            await Task.Delay(3000); // Delay for 3 seconds
+            Navigation.NavigateTo("/Login");
         }
         else
         {
@@ -73,6 +95,17 @@
     // [DataType(DataType.Password)]: Makes sure that Password is treated as a Password
     private sealed class InputModel
     {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int UserID { get; set; }
+
+        [Required]
+        public string Name { get; set; } = "";
+
+        [Required]
+        [Phone]
+        public string PhoneNumber { get; set; } = "";
+
         [Required]
         [EmailAddress]
         public string Email { get; set; } = "";
@@ -81,6 +114,6 @@
         [DataType(DataType.Password)]
         public string Password { get; set; } = "";
 
-        public string Role { get; set; } = "Customer"; // This makes the Default role for user assigned automatically.
+        public string Role { get; set; } = "Customer";
     }
 }
