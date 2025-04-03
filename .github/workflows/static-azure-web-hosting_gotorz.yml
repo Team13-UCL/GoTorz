@@ -65,4 +65,5 @@ jobs:
           app-name: 'Gotorz'
           slot-name: 'Production'
           package: .
+          config_file_location: 'appsettings.json' # Ensure this is included
           
