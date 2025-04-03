@@ -37,7 +37,7 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https:/
 
 builder.Services.AddScoped<UserService>();
 
-builder.Services.AddAuthentication();
+//builder.Services.AddAuthentication();
 
 builder.Services.AddScoped<AmadeusAuthService>();
 builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
