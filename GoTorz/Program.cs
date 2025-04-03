@@ -27,13 +27,13 @@ builder.Services.AddDbContextFactory<AuthContext>(options =>
 builder.Services.AddHttpClient();
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://test.api.amadeus.com/") });
 
-//// login authentication and path ways if the login should fail, or we want to denide access to certain parts
-//builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-//    .AddCookie( options =>
-//    {
-//        options.LoginPath = "/login";
-//        options.AccessDeniedPath = "/accessdenied";
-//    });
+// login authentication and path ways if the login should fail, or we want to denide access to certain parts
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/login";
+        options.AccessDeniedPath = "/accessdenied";
+    });
 
 builder.Services.AddScoped<UserService>();
 
