@@ -84,7 +84,7 @@ if (!app.Environment.IsDevelopment())
     app.UseMigrationsEndPoint();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 // HTTP Authentication, it automatically checks if the user has a valid login-cookie
 app.UseAuthentication();
