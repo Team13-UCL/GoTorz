@@ -16,7 +16,9 @@ using GoTorz.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 //builder.Configuration.AddUserSecrets<Program>();
-
+// Add configuration from appsettings.json
+builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+builder.Configuration.AddEnvironmentVariables();
 builder.Services.AddDbContextFactory<GoTorzContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("GoTorzContext") ?? throw new InvalidOperationException("Connection string 'GoTorzContext' not found.")));
 
