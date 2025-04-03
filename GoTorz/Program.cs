@@ -15,6 +15,8 @@ using GoTorz.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+
 builder.Configuration.AddUserSecrets<Program>();
 
 builder.Services.AddDbContextFactory<GoTorzContext>(options =>
