@@ -86,8 +86,8 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-//// HTTP Authentication, it automatically checks if the user has a valid login-cookie
-//app.UseAuthentication();
+// HTTP Authentication, it automatically checks if the user has a valid login-cookie
+app.UseAuthentication();
 //// Controlles if the user has the rights to access to different pages
 //app.UseAuthorization();
 
