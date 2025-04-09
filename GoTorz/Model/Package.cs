@@ -4,6 +4,7 @@ namespace GoTorz.Model
 {
     public class Package
     {
+        public int PackageID { get; set; } // PK
         public int PlaneId { get; set; }
         public int HotelId { get; set; }
         public int ReturnPlaneID { get; set; }

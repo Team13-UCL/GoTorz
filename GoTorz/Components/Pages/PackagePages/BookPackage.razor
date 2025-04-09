@@ -1,0 +1,224 @@
+﻿@page "/book-package/{PlaneId:int}/{HotelId:int}/{ReturnPlaneId:int}"
+@using GoTorz.Model
+@using Microsoft.EntityFrameworkCore
+@inject GoTorz.Data.GoTorzContext DbContext
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
+<div class="container my-5">
+    <img src="https://gotorz.ae/assets/img/logo-medium.png" alt="Gotorz logo" style="max-width: 200px;" class="d-block mx-auto mb-4" />
+    <h1 class="text-center text-warning mb-4">Confirm Your Booking</h1>
+
+   @if (IsLoading)
+    {
+        <div class="text-center my-5">
+            <div class="spinner-border text-warning" role="status"></div>
+            <p>Loading details...</p>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i> @ErrorMessage
+        </div>
+        <div class="text-center mt-3">
+            <a href="/destinations" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Destinations
+            </a>
+        </div>
+    }
+    else if (CurrentPackage != null)
+    {
+        <!-- Package Details Card -->
+        <div class="card shadow-lg mb-4">
+            <div class="card-header bg-warning">
+                <h4 class="mb-0 text-dark"><i class="fas fa-suitcase"></i> Trip Details</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>@CurrentPackage.Plane.ArrivalAirport - @CurrentPackage.Hotels.Name</h5>
+                        <p><i class="fas fa-plane-departure"></i> <strong>From:</strong> @CurrentPackage.Plane.DepartureAirport</p>
+                        <p><i class="fas fa-calendar-alt"></i> <strong>Departure:</strong> @CurrentPackage.Plane.StartDate.ToString("dd/MM/yyyy")</p>
+                        <p><i class="fas fa-calendar-alt"></i> <strong>Return:</strong> @CurrentPackage.ReturnPlane.ReturnDate.ToString("dd/MM/yyyy")</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><i class="fas fa-hotel"></i> <strong>Hotel:</strong> @CurrentPackage.Hotels.Name</p>
+                        <p><i class="fas fa-clock"></i> <strong>Duration:</strong> @CurrentPackage.ReturnPlane.Duration days</p>
+                        <h4 class="text-success mt-3">@CurrentPackage.PackagePrice?.ToString("N2") €</h4>
+                        <small class="text-muted">per person</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+ 
+
+        <!-- Action Buttons -->
+        <div class="d-flex justify-content-between mt-4">
+            <a href="/destinations" class="btn btn-outline-secondary btn-lg">
+                <i class="fas fa-arrow-left"></i> Cancel
+            </a>
+            
+             <button class="btn btn-success btn-lg" @onclick="ConfirmBooking">
+                <i class="fas fa-credit-card"></i> Confirm Booking
+            </button> 
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-warning text-center">
+            <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
+            <h5>Package Not Found</h5>
+            <p>We couldn't find the travel package you're looking for.</p>
+            <a href="/destinations" class="btn btn-warning mt-3">Browse Destinations</a>
+        </div>
+    }
+
+    @if (BookingComplete)
+    {
+        <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title"><i class="fas fa-check-circle"></i> Booking Confirmed!</h5>
+                    </div>
+                    <div class="modal-body text-center">
+                        <i class="fas fa-paper-plane fa-4x text-success mb-3"></i>
+                        <h4>Thank you for your booking!</h4>
+                        <p>Your booking has been confirmed.</p>
+                        <p>Booking reference: <strong>@BookingReference</strong></p>
+                    </div>
+                    <div class="modal-footer">
+                        <a href="/destinations" class="btn btn-success">Continue Shopping</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int PlaneId { get; set; }
+    
+    [Parameter]
+    public int HotelId { get; set; }
+    
+    [Parameter]
+    public int ReturnPlaneId { get; set; }
+    
+    private Package CurrentPackage { get; set; }
+    private bool IsLoading { get; set; } = true;
+    private string ErrorMessage { get; set; } = "";
+    private bool BookingComplete { get; set; } = false;
+    private string BookingReference { get; set; } = "";
+    
+    // Guest information
+    private string GuestName { get; set; } = "";
+    private string GuestEmail { get; set; } = "";
+    
+    //OnItializedAsync kaldes for at hente valgte pakke og dens detaljer
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await LoadPackageDetails();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error loading page: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+    
+    private async Task LoadPackageDetails()
+    {
+        try
+        {
+            // Get the package by its components
+            CurrentPackage = await DbContext.Package
+                .Include(p => p.Hotels)
+                .Include(p => p.Plane)
+                .Include(p => p.ReturnPlane)
+                .FirstOrDefaultAsync(p => 
+                    p.PlaneId == PlaneId && 
+                    p.HotelId == HotelId && 
+                    p.ReturnPlaneID == ReturnPlaneId);
+                
+            if (CurrentPackage == null)
+            {
+                ErrorMessage = "The selected travel package could not be found.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error loading package: {ex.Message}";
+        }
+    }
+    
+ 
+    
+    private async Task ConfirmBooking()
+    {
+        IsLoading = true;
+
+        try
+        {
+            // 1. Create temporary user
+            var tempUser = new User
+                {
+                    Name = GuestName,
+                    Email = GuestEmail,
+                    Password = Guid.NewGuid().ToString(),
+                    Role = "Guest"
+                };
+
+            DbContext.User.Add(tempUser);
+            await DbContext.SaveChangesAsync();
+
+            // 2. Find the PackageID that matches the components
+            var package = await DbContext.Package
+                .FirstOrDefaultAsync(p =>
+                    p.PlaneId == CurrentPackage.PlaneId &&
+                    p.HotelId == CurrentPackage.HotelId &&
+                    p.ReturnPlaneID == CurrentPackage.ReturnPlaneID);
+
+            if (package == null)
+            {
+                throw new Exception("Matching package not found");
+            }
+
+            // 3. Save booking
+            var packageUser = new PackageUser
+                {
+                    PackagePlaneId = CurrentPackage.PlaneId,
+                    PackageHotelId = CurrentPackage.HotelId,
+                    ReturnPlaneID = CurrentPackage.ReturnPlaneID,
+                    UserID = tempUser.UserID,
+                    BookingDate = DateTime.Now,
+                    Status = "Confirmed"
+                };
+
+            DbContext.PackageUser.Add(packageUser);
+            await DbContext.SaveChangesAsync();
+
+            // 4. Generate booking reference
+            BookingReference = $"GT-{DateTime.Now:yyMMdd}-{tempUser.UserID}";
+            BookingComplete = true;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Der opstod en fejl under bookingen: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+}
+

@@ -35,6 +35,21 @@ namespace GoTorz.Data
                 .WithMany()
                 .HasForeignKey(p => p.HotelId);
 
+
+
+            // Configure the composite primary key for PackageUser
+            modelBuilder.Entity<PackageUser>()
+                .HasKey(pu => new { pu.PackagePlaneId, pu.PackageHotelId, pu.ReturnPlaneID, pu.UserID });
+
+            // Configure the relationship without enforcing database-level foreign key
+            modelBuilder.Entity<PackageUser>()
+                .HasOne(pu => pu.Package)
+                .WithMany()
+                .HasPrincipalKey(p => new { p.PlaneId, p.HotelId, p.ReturnPlaneID })
+                .HasForeignKey(pu => new { pu.PackagePlaneId, pu.PackageHotelId, pu.ReturnPlaneID })
+                .OnDelete(DeleteBehavior.ClientNoAction); // Handle deletion in code
+
+
             base.OnModelCreating(modelBuilder);
         }
 
@@ -44,5 +59,6 @@ namespace GoTorz.Data
         public DbSet<Hotels> Hotels { get; set; } = default!;
         public DbSet<ReturnPlane> ReturnPlane { get; set; } = default!;
         public DbSet<User> User { get; set; } = default!;
+        public DbSet<PackageUser> PackageUser { get; set; } = default!;
     }
 }
