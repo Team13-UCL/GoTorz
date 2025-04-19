@@ -1,4 +1,6 @@
 ﻿@page "/packages/details"
+@attribute [Authorize(Roles = "Sales,Admin")]
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 @using GoTorz.Model
 @inject IDbContextFactory<GoTorz.Data.GoTorzContext> DbFactory
