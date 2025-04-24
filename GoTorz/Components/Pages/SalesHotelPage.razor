@@ -2,6 +2,7 @@
     @inject HttpClient Http
     @inject ILogger<SalesHotelPage> Logger
     @inject AmadeusAuthService AmadeusService
+@attribute [Authorize(Roles = "Admin,Sales")]
     @using System.Text.Json.Serialization;
     @using System.Text.Json
     @using GoTorz.Model

@@ -1,16 +1,15 @@
-﻿@page "/order-history"
-@using GoTorz.Model
-@using Microsoft.EntityFrameworkCore
-@using System.Security.Claims
-@using Microsoft.AspNetCore.Components.Authorization
-@inject GoTorz.Data.GoTorzContext DbContext
-@inject NavigationManager Navigation
-@inject AuthenticationStateProvider AuthenticationStateProvider
-@rendermode InteractiveServer
+﻿@page "/CustomerBookings"
+ @using GoTorz.Model
+@using Microsoft.AspNetCore.Authorization
+ @using Microsoft.EntityFrameworkCore
+ @inject GoTorz.Data.GoTorzContext DbContext
+ @inject NavigationManager Navigation
+@attribute [Authorize(Roles = "Sales,Admin")]
+ @rendermode InteractiveServer
 
 <div class="container my-5">
     <img src="https://gotorz.ae/assets/img/logo-medium.png" alt="Gotorz logo" style="max-width: 200px;" class="d-block mx-auto mb-4" />
-    <h1 class="text-center text-warning mb-4">Your Booking History</h1>
+    <h1 class="text-center text-warning mb-4">Customer Bookings</h1>
 
     @if (IsLoading)
     {
@@ -44,12 +43,6 @@
                             </p>
                         </div>
                         <div>
-                            <button class="btn btn-danger btn-sm me-2" @onclick="() => CancelBooking(booking)">
-                                <i class="fas fa-times"></i> Cancel
-                            </button>
-                            <button class="btn btn-success btn-sm" disabled @onclick="() => ProceedToPayment(booking)">
-                                <i class="fas fa-credit-card"></i> Pay Later
-                            </button>
                         </div>
                     </div>
 
@@ -86,33 +79,16 @@
     {
         try
         {
-            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-            var user = authState.User;
+            // In a real app, you would filter by logged-in user
+            // For now, we'll just get all bookings
+            UserBookings = await DbContext.PackageUser
+                .Include(pu => pu.Package)
+                .ThenInclude(p => p.Plane)
+                .Include(pu => pu.Package)
+                .ThenInclude(p => p.Hotels)
 
-            if (user.Identity is not null && user.Identity.IsAuthenticated)
-            {
-                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-                if (string.IsNullOrEmpty(userId))
-                {
-                    ErrorMessage = "No user ID found in user claims.";
-                    return;
-                }
-                // Convert string userId to int to match PackageUser.UserID
-                if (int.TryParse(userId, out int userIdInt))
-                UserBookings = await DbContext.PackageUser
-                    .Where(pu => pu.UserID == userIdInt)  // Now comparing int with int
-                    .Include(pu => pu.Package)
-                        .ThenInclude(p => p.Plane)
-                    .Include(pu => pu.Package)
-                        .ThenInclude(p => p.Hotels)
-                    .OrderByDescending(pu => pu.BookingDate)
-                    .ToListAsync();
-            }
-            else
-            {
-                ErrorMessage = "User is not authenticated.";
-            }
+                .OrderByDescending(pu => pu.BookingDate)
+                .ToListAsync();
         }
         catch (Exception ex)
         {
@@ -126,9 +102,10 @@
 
     private string GetBookingReference(PackageUser booking)
     {
+        // Bruger en kombination af dato og ID'er til at skabe en unik reference
         return $"GT-{booking.BookingDate:yyMMdd}-{booking.PackagePlaneId}-{booking.PackageHotelId}-{booking.ReturnPlaneID}";
     }
-
+    // Returnerer en farve baseret på bookingstatus
     private string GetStatusBadgeColor(string status)
     {
         return status switch
@@ -146,16 +123,13 @@
             booking.Status = "Cancelled";
             DbContext.PackageUser.Update(booking);
             await DbContext.SaveChangesAsync();
+
+            // Refresh the list
             await OnInitializedAsync();
         }
         catch (Exception ex)
         {
             ErrorMessage = $"Error cancelling booking: {ex.Message}";
         }
-    }
-
-    private void ProceedToPayment(PackageUser booking)
-    {
-        // Payment logic kommer senere
     }
 }

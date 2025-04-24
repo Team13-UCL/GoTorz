@@ -1,9 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GoTorz.Model
 {
     public class Package
     {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)] // Fortæller Entity Framework at databasen selv skal generere PackageID-værdier
         public int PackageID { get; set; } // PK
         public int PlaneId { get; set; }
         public int HotelId { get; set; }

@@ -1,6 +1,9 @@
 ﻿@page "/book-package/{PlaneId:int}/{HotelId:int}/{ReturnPlaneId:int}"
 @using GoTorz.Model
 @using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject GoTorz.Data.GoTorzContext DbContext
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
@@ -169,19 +172,29 @@
 
         try
         {
-            // 1. Create temporary user
-            var tempUser = new User
-                {
-                    Name = GuestName,
-                    Email = GuestEmail,
-                    Password = Guid.NewGuid().ToString(),
-                    Role = "Guest"
-                };
+            //Tjekker om brugeren er logget ind
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
 
-            DbContext.User.Add(tempUser);
-            await DbContext.SaveChangesAsync();
+            if (user.Identity == null || !user.Identity.IsAuthenticated)
+            {
+                throw new Exception("You must be logged in to make a booking.");
+            }
+            //Henter brugerens ID fra authentication claims
+            var userIdString = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdString, out int userId))
+            {
+                throw new Exception("Invalid user ID.");
+            }
 
-            // 2. Find the PackageID that matches the components
+            // Finder brugeren i databasen
+            var bookingUser = await DbContext.User.FindAsync(userId);
+            if (bookingUser == null)
+            {
+                throw new Exception("User not found in database.");
+            }
+
+            // Finder den valgte pakke i databasen
             var package = await DbContext.Package
                 .FirstOrDefaultAsync(p =>
                     p.PlaneId == CurrentPackage.PlaneId &&
@@ -190,25 +203,25 @@
 
             if (package == null)
             {
-                throw new Exception("Matching package not found");
+                throw new Exception("Package not found.");
             }
 
-            // 3. Save booking
+            // Opretter en ny booking i PackageUser tabellen
             var packageUser = new PackageUser
                 {
-                    PackagePlaneId = CurrentPackage.PlaneId,
-                    PackageHotelId = CurrentPackage.HotelId,
-                    ReturnPlaneID = CurrentPackage.ReturnPlaneID,
-                    UserID = tempUser.UserID,
-                    BookingDate = DateTime.Now,
-                    Status = "Confirmed"
+                    PackagePlaneId = CurrentPackage.PlaneId, //Fly ID til udrejse
+                    PackageHotelId = CurrentPackage.HotelId, //Hotel ID
+                    ReturnPlaneID = CurrentPackage.ReturnPlaneID, //Fly ID til hjemrejse
+                    UserID = bookingUser.UserID, //Bruger ID
+                    BookingDate = DateTime.Now, //Nuværende dato og tidspunkt
+                    Status = "Confirmed" //Status for bookingen
                 };
-
+                //Tilføjer booking til databasen og gemmer det 
             DbContext.PackageUser.Add(packageUser);
             await DbContext.SaveChangesAsync();
 
-            // 4. Generate booking reference
-            BookingReference = $"GT-{DateTime.Now:yyMMdd}-{tempUser.UserID}";
+            // Genererer en unik booking reference 
+            BookingReference = $"GT-{DateTime.Now:yyMMdd}-{bookingUser.UserID}";
             BookingComplete = true;
         }
         catch (Exception ex)
