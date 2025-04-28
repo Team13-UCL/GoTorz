@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,7 +14,10 @@ namespace GoTorz.Data
             : base(options)
         {
         }
-        //create a composite key
+        /// <summary>
+        /// Configures the entity relationships, composite keys, and foreign key constraints for the GoTorz database context.
+        /// </summary>
+        /// <param name="modelBuilder">The builder used to construct the entity model for the context.</param>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Package>()
