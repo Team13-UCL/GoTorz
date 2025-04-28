@@ -29,5 +29,9 @@ namespace GoTorz.Services
             return context.Users.FirstOrDefault(x => x.Email.ToLower() == email.ToLower()
             && x.Password == password);
         }
+        public User? GetUserByEmail(string email)
+        {
+            return context.Users.FirstOrDefault(u => u.Email == email);
+        }
     }
 }
