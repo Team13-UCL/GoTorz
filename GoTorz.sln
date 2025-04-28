@@ -5,6 +5,8 @@ VisualStudioVersion = 17.13.35825.156
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GoTorz", "GoTorz\GoTorz.csproj", "{FCEEE96D-E7E4-4CFA-9E0C-71F44B31E6C7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gotorz Test", "Gotorz Test\Gotorz Test.csproj", "{3E42DF2C-F380-491C-AFE8-5CEB372614BD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{FCEEE96D-E7E4-4CFA-9E0C-71F44B31E6C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FCEEE96D-E7E4-4CFA-9E0C-71F44B31E6C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FCEEE96D-E7E4-4CFA-9E0C-71F44B31E6C7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3E42DF2C-F380-491C-AFE8-5CEB372614BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3E42DF2C-F380-491C-AFE8-5CEB372614BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3E42DF2C-F380-491C-AFE8-5CEB372614BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3E42DF2C-F380-491C-AFE8-5CEB372614BD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
