@@ -1,11 +1,11 @@
 ﻿@page "/CustomerBookings"
- @using GoTorz.Model
+@using GoTorz.Model
 @using Microsoft.AspNetCore.Authorization
- @using Microsoft.EntityFrameworkCore
- @inject GoTorz.Data.GoTorzContext DbContext
- @inject NavigationManager Navigation
+@using Microsoft.EntityFrameworkCore
+@inject GoTorz.Data.GoTorzContext DbContext
+@inject NavigationManager Navigation
 @attribute [Authorize(Roles = "Sales,Admin")]
- @rendermode InteractiveServer
+@rendermode InteractiveServer
 
 <div class="container my-5">
     <img src="https://gotorz.ae/assets/img/logo-medium.png" alt="Gotorz logo" style="max-width: 200px;" class="d-block mx-auto mb-4" />
@@ -42,18 +42,51 @@
                                 Status: <span class="badge bg-@GetStatusBadgeColor(booking.Status)">@booking.Status</span>
                             </p>
                         </div>
-                        <div>
-                        </div>
                     </div>
 
                     @if (booking.Package != null)
                     {
                         <div class="mt-3 p-3 bg-light rounded">
                             <h6>Trip Details:</h6>
-                            <p>@booking.Package.Plane.DepartureAirport → @booking.Package.Plane.ArrivalAirport</p>
-                            <p>Hotel: @booking.Package.Hotels.Name</p>
-                            <p>Total: @booking.Package.PackagePrice?.ToString("N2") €</p>
+                            <div class="row">
+                                <!-- Flight Details -->
+                                <div class="col-md-4">
+                                    <p><strong>Flight Details:</strong></p>
+                                    <p>Plane ID: @booking.Package.Plane.PlaneId</p>
+                                    <p>Carrier Code: @booking.Package.Plane.CarrierCode</p>
+                                    <p>Departure Airport: @booking.Package.Plane.DepartureAirport</p>
+                                    <p>Arrival Airport: @booking.Package.Plane.ArrivalAirport</p>
+                                    <p>Start Date: @booking.Package.Plane.StartDate.ToString("yyyy-MM-dd")</p>
+                                    <p>Price: @($"{booking.Package.Plane.Price} €")</p>
+                                </div>
+
+                                <!-- Return Flight Details -->
+                                <div class="col-md-4">
+                                    <p><strong>Return Flight Details:</strong></p>
+                                    <p>Return Plane ID: @booking.Package.ReturnPlane.ReturnPlaneId</p>
+                                    <p>Carrier Code: @booking.Package.ReturnPlane.CarrierCode</p>
+                                    <p>Departure Airport: @booking.Package.ReturnPlane.DepartureAirport</p>
+                                    <p>Arrival Airport: @booking.Package.ReturnPlane.ArrivalAirport</p>
+                                    <p>Return Date: @booking.Package.ReturnPlane.ReturnDate.ToString("yyyy-MM-dd")</p>
+                                    <p>Duration: @booking.Package.ReturnPlane.Duration days</p>
+                                    <p>Price: @($"{booking.Package.ReturnPlane.Price} €")</p>
+                                </div>
+
+                                <!-- Hotel Details -->
+                                <div class="col-md-4">
+                                    <p><strong>Hotel Details:</strong></p>
+                                    <p>Hotel Name: @booking.Package.Hotels.Name</p>
+                                    <p>Check-In Date: @booking.Package.Hotels.CheckInDate.ToString("yyyy-MM-dd")</p>
+                                    <p>Check-Out Date: @booking.Package.Hotels.CheckOutDate.ToString("yyyy-MM-dd")</p>
+                                    <p>Hotel Price: @($"{booking.Package.Hotels.Price} €")</p>
+
+                                    <p><strong>Total Package Price:</strong> @($"{booking.Package.PackagePrice} €")</p>
+                                    
+                                </div>
+                            </div>
                         </div>
+                    
+
                     }
                 </div>
             }
@@ -85,8 +118,9 @@
                 .Include(pu => pu.Package)
                 .ThenInclude(p => p.Plane)
                 .Include(pu => pu.Package)
+                .ThenInclude(p => p.ReturnPlane)
+                .Include(pu => pu.Package)
                 .ThenInclude(p => p.Hotels)
-
                 .OrderByDescending(pu => pu.BookingDate)
                 .ToListAsync();
         }
@@ -102,10 +136,10 @@
 
     private string GetBookingReference(PackageUser booking)
     {
-        // Bruger en kombination af dato og ID'er til at skabe en unik reference
+        // Generate a unique reference using date and IDs
         return $"GT-{booking.BookingDate:yyMMdd}-{booking.PackagePlaneId}-{booking.PackageHotelId}-{booking.ReturnPlaneID}";
     }
-    // Returnerer en farve baseret på bookingstatus
+
     private string GetStatusBadgeColor(string status)
     {
         return status switch
@@ -114,22 +148,5 @@
             "Cancelled" => "danger",
             _ => "secondary"
         };
-    }
-
-    private async Task CancelBooking(PackageUser booking)
-    {
-        try
-        {
-            booking.Status = "Cancelled";
-            DbContext.PackageUser.Update(booking);
-            await DbContext.SaveChangesAsync();
-
-            // Refresh the list
-            await OnInitializedAsync();
-        }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Error cancelling booking: {ex.Message}";
-        }
     }
 }
