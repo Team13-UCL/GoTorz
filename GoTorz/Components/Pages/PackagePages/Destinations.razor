@@ -1,0 +1,365 @@
+﻿@page "/"
+@using GoTorz.Model
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@inject GoTorz.Data.GoTorzContext DbContext
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@attribute [StreamRendering]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+   
+
+
+<div class="container my-5">
+       <img src="https://gotorz.ae/assets/img/logo-medium.png" alt="Gotorz logo" style="max-width: 200px;" class="d-block mx-auto mb-4" />
+    
+       <h1 class="text-center text-black mb-4">Find Your Dream Destination</h1>
+
+<!--Søgefeltet-->
+    <div class="card shadow-lg mb-5">
+        <div class="card-header bg-warning">
+            <h4 class="mb-0 text-dark"><i class="fas fa-search"></i> Search Destinations</h4>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="form-floating">
+                        <input type="text" class="form-control" id="destinationSearch" @bind="SearchTerm" @bind:event="oninput" @onkeyup="HandleSearch" placeholder="Where do you want to go?">
+                        <label for="destinationSearch">Destination</label>
+                    </div>
+                </div>
+
+                <!--søge input for departure date-->
+                <div class="col-md-3">
+                    <div class="form-floating">
+                        <input type="date" class="form-control" id="departureDate" @bind="DepartureDate">
+                        <label for="departureDate">Departure Date</label>
+                    </div>
+                </div>
+
+                <!--søge input for return date-->
+                <div class="col-md-3">
+                    <div class="form-floating">
+                        <input type="date" class="form-control" id="returnDate" @bind="ReturnDate">
+                        <label for="returnDate">Return Date</label>
+                    </div>
+                </div>
+
+                <!--søge knap-->
+                <div class="col-md-2">
+                    <button class="btn btn-warning btn-lg w-100 h-100" @onclick="SearchDestinations">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </div>
+
+            <!--sorting options-->
+            <div class="mt-3">
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="sortByPrice" @bind="SortByPrice">
+                    <label class="form-check-label" for="sortByPrice">Sort by Price</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="sortByDate" @bind="SortByDate">
+                    <label class="form-check-label" for="sortByDate">Sort by Date</label>
+                </div>
+            </div>
+        </div>
+    </div>
+   
+    @if (IsLoading)
+    {
+        <div class="text-center my-5">
+            <div class="spinner-border text-warning" role="status"></div>
+            <p>Finding the best travel options for you...</p>
+        </div>
+    }
+
+   
+    else if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i> @ErrorMessage
+        </div>
+    }
+    else if (FilteredPackages.Count == 0 && HasSearched)
+    {
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle fa-2x mb-3"></i>
+            <h5>No travel packages found</h5>
+            <p>Try adjusting your search criteria or exploring our popular destinations below.</p>
+        </div>
+
+    
+    }
+
+    else if (FilteredPackages.Count > 0)
+    {
+        <h3 class="text-center mb-4">Available Travel Packages for "@SearchTerm"</h3>
+
+        <div class="row">
+            @foreach (var package in FilteredPackages)
+            {
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">@package.Plane.ArrivalAirport - @package.Hotels.Name</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <p><i class="fas fa-plane-departure"></i> <strong>From:</strong> @package.Plane.DepartureAirport</p>
+                                    <p><i class="fas fa-calendar-alt"></i> <strong>Departure:</strong> @package.Plane.StartDate.ToString("dd/MM/yyyy")</p>
+                                    <p><i class="fas fa-calendar-alt"></i> <strong>Return:</strong> @package.ReturnPlane.ReturnDate.ToString("dd/MM/yyyy")</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><i class="fas fa-hotel"></i> <strong>Hotel:</strong> @package.Hotels.Name</p>
+                                    <p><i class="fas fa-clock"></i> <strong>Duration:</strong> @package.ReturnPlane.Duration days</p>
+                                </div>
+                            </div>
+                            <hr />
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h4 class="text-success mb-0">@package.PackagePrice?.ToString("N2") €</h4>
+                                    <small class="text-muted">per person</small>
+                                </div>
+                                @if (package.IsBooked)
+                                {
+                                    <span class="badge bg-danger">Already Booked</span>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-warning" @onclick="() => SelectPackage(package)">
+                                        <i class="fas fa-shopping-cart"></i> Book Now
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+        </div>
+
+    }
+    <!--Popular destinations preview-->
+    <h3 class="text-center text-warning mt-5 mb-4">Popular Destinations</h3>
+    <div class="row">
+        @foreach (var destination in PopularDestinations)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm h-100">
+                    <img src="@destination.ImageUrl" class="card-img-top" alt="@destination.Name" style="height: 200px; object-fit: cover;">
+                    <div class="card-body text-center">
+                        <h5>@destination.Name</h5>
+                        <p class="text-muted">Starting from @destination.Price.ToString("N2") €</p>
+                        <button class="btn btn-sm btn-outline-warning" @onclick="() => SetSearchTermAsync(destination.Name)">View Packages</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h3 class="text-center text-warning">Let's Start Adventures</h3>
+                    <div class="px-4">
+                        <p class="text-center">
+                            We at Gotorz give you, besides the travel experience, the pleasure of adventure and discovering new and enjoyable tourist destinations.
+                            Life is short and the world is very wide, the sooner you start to discover it, the better.
+                        </p>
+                        <p class="text-center">
+                            Gotorz has made achieving happiness and travel easy and convenient in addition to being cheap and accessible to everyone.
+                            Cheap prices with high services - this equation we succeeded in achieving, leaving a large imprint in the world of the travel industry.
+                        </p>
+                        <p class="text-center">
+                            Traveling is a culture that gives you experiences no book or library could provide. It's real, direct contact with life, beauty,
+                            and other cultures. Traveling creates awareness that seeps deep into your consciousness and makes you a storyteller.
+                            Seeing once is better than hearing a hundred times - so don't just hear about travel, go see for yourself.
+                        </p>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @if (ShowLoginErrorModal)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-danger">Login Required</h5>
+                        <button type="button" class="btn-close" @onclick="CloseLoginErrorModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>You must be logged in to confirm a booking. Please log in to continue.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" @onclick="RedirectToLogin">Go to Login</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string SearchTerm { get; set; } = "";
+    private DateTime? DepartureDate { get; set; } = DateTime.Now.AddDays(14);
+    private DateTime? ReturnDate { get; set; } = DateTime.Now.AddDays(21);
+    private bool SortByPrice { get; set; } = false;
+    private bool SortByDate { get; set; } = false;
+    private bool IsLoading { get; set; } = false;
+    private bool HasSearched { get; set; } = false;
+    private bool ShowLoginErrorModal { get; set; } = false;
+    private string ErrorMessage { get; set; } = "";
+    public bool IsBooked { get; set; }
+
+    //Alle vores pakker fra vores database 
+    private List<Package> AllPackages { get; set; } = new();
+    private List<Package> FilteredPackages { get; set; } = new();
+
+    // liste af samme destinationer som home-siden for at vise dem i en preview
+    private List<Destination> PopularDestinations = new()
+    {
+        new Destination { Name = "Paris", ImageUrl = "https://cdn.pixabay.com/photo/2019/02/21/18/52/paris-4011964_1280.jpg", Price = 299 },
+        new Destination { Name = "London", ImageUrl = "https://cdn.pixabay.com/photo/2020/11/09/22/20/tower-bridge-5727975_960_720.jpg", Price = 349 },
+        new Destination { Name = "New York", ImageUrl = "https://cdn.pixabay.com/photo/2020/10/23/06/23/city-5677823_1280.jpg", Price = 599 },
+        new Destination { Name = "Athens", ImageUrl = "https://cdn.pixabay.com/photo/2013/08/29/08/24/st-peters-square-177011_1280.jpg", Price = 599 },
+        new Destination { Name = "Cairo", ImageUrl = "https://cdn.pixabay.com/photo/2020/01/27/01/34/pyramids-4796249_1280.jpg", Price = 599 },
+        new Destination { Name = "Marrakech", ImageUrl = "https://cdn.pixabay.com/photo/2021/02/06/20/48/morocco-5989338_1280.jpg", Price = 599 }
+    };
+
+    //Loader alle rejsepakker fra databasen
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAllPackages();
+    }
+    //Søger efter destinationer baseret på brugerens input
+    private async Task SetSearchTermAsync(string term)
+    {
+        SearchTerm = term;
+        HasSearched = true;
+        await SearchDestinations();
+    }
+
+    private async Task LoadAllPackages()
+    {
+        try
+        {
+            // Load all packages with related data
+            var packages = await DbContext.Package
+                .Include(p => p.Hotels)
+                .Include(p => p.Plane)
+                .Include(p => p.ReturnPlane)
+                .ToListAsync();
+
+            // Check booking status for each package
+            var bookedPackages = await DbContext.PackageUser
+                .Where(pu => pu.Status == "Confirmed")
+                .ToListAsync();
+
+            AllPackages = packages.Select(p => new Package
+                {
+                    PackageID = p.PackageID,
+                    PlaneId = p.PlaneId,
+                    HotelId = p.HotelId,
+                    ReturnPlaneID = p.ReturnPlaneID,
+                    PackagePrice = p.PackagePrice,
+                    Plane = p.Plane,
+                    ReturnPlane = p.ReturnPlane,
+                    Hotels = p.Hotels,
+                    IsBooked = bookedPackages.Any(bp =>
+                        bp.PackagePlaneId == p.PlaneId &&
+                        bp.PackageHotelId == p.HotelId &&
+                        bp.ReturnPlaneID == p.ReturnPlaneID)
+                }).ToList();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error loading packages: {ex.Message}";
+        }
+    }
+
+    private async Task SearchDestinations()
+    {
+        IsLoading = true;
+        HasSearched = true;
+        ErrorMessage = "";
+
+        try
+        {
+            // Filter packages based on search criteria
+            FilteredPackages = AllPackages.Where(p =>
+                (string.IsNullOrEmpty(SearchTerm) ||
+                 p.Plane.ArrivalAirport.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                 p.Hotels.Name.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase)) &&
+                (!DepartureDate.HasValue || p.Plane.StartDate.Date >= DepartureDate.Value.Date) &&
+                (!ReturnDate.HasValue || p.ReturnPlane.ReturnDate.Date <= ReturnDate.Value.Date)
+            ).ToList();
+
+            // Apply sorting
+            if (SortByPrice)
+            {
+                FilteredPackages = FilteredPackages.OrderBy(p => p.PackagePrice).ToList();
+            }
+            else if (SortByDate)
+            {
+                FilteredPackages = FilteredPackages.OrderBy(p => p.Plane.StartDate).ToList();
+            }
+
+            await Task.Delay(500); // Small delay to show loading indicator
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error searching packages: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleSearch(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            SearchDestinations();
+        }
+    }
+
+
+    private async Task<bool> IsUserLoggedInAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        return user.Identity != null && user.Identity.IsAuthenticated;
+    }
+
+    private async void SelectPackage(Package package)
+    {
+        if (!await IsUserLoggedInAsync())
+        {
+            ShowLoginErrorModal = true; // Show the login error modal
+        }
+        else
+        {
+            // Navigate to the booking page if logged in
+            Navigation.NavigateTo($"/book-package/{package.PlaneId}/{package.HotelId}/{package.ReturnPlaneID}");
+        }
+    }
+    private void CloseLoginErrorModal()
+    {
+        ShowLoginErrorModal = false; // Close the modal
+    }
+
+    private void RedirectToLogin()
+    {
+        Navigation.NavigateTo("/login"); // Redirect to the login page
+    }   
+}

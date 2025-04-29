@@ -1,9 +1,13 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GoTorz.Model
 {
     public class Package
     {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)] // Fortæller Entity Framework at databasen selv skal generere PackageID-værdier
+        public int PackageID { get; set; } // PK
         public int PlaneId { get; set; }
         public int HotelId { get; set; }
         public int ReturnPlaneID { get; set; }
@@ -18,5 +22,9 @@ namespace GoTorz.Model
 
         [ForeignKey("HotelId")]
         public Hotels Hotels { get; set; } = default!;
+
+        //  property to indicate booking status, notmapped so the DB does not use it
+        [NotMapped]
+        public bool IsBooked { get; set; }
     }
 }

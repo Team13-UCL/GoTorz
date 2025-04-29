@@ -1,0 +1,26 @@
+name: Sync master to azure-hoster-tester
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  sync-branches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge master into azure-hoster-tester
+        run: |
+          git checkout azure-hoster-tester
+          git merge origin/master --no-edit || echo "Already up to date"
+          git push origin azure-hoster-tester

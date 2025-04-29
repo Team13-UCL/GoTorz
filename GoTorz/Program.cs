@@ -51,7 +51,7 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 // Tilføj Serilog som Logger
-builder.Host.UseSerilog();
+//builder.Host.UseSerilog();
 
 builder.Services.AddQuickGridEntityFrameworkAdapter();
 

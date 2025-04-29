@@ -35,14 +35,30 @@ namespace GoTorz.Data
                 .WithMany()
                 .HasForeignKey(p => p.HotelId);
 
+
+
+            // Configure the composite primary key for PackageUser
+            modelBuilder.Entity<PackageUser>()
+                .HasKey(pu => new { pu.PackagePlaneId, pu.PackageHotelId, pu.ReturnPlaneID, pu.UserID });
+
+            // Configure the relationship without enforcing database-level foreign key
+            modelBuilder.Entity<PackageUser>()
+                .HasOne(pu => pu.Package)
+                .WithMany()
+                .HasPrincipalKey(p => new { p.PlaneId, p.HotelId, p.ReturnPlaneID })
+                .HasForeignKey(pu => new { pu.PackagePlaneId, pu.PackageHotelId, pu.ReturnPlaneID })
+                .OnDelete(DeleteBehavior.ClientNoAction); // Handle deletion in code
+
+
             base.OnModelCreating(modelBuilder);
         }
 
-        //add the DbSet, mapping the model to the database
-        public DbSet<Package> Package { get; set; } = default!;
-        public DbSet<Plane> Plane { get; set; } = default!;
-        public DbSet<Hotels> Hotels { get; set; } = default!;
-        public DbSet<ReturnPlane> ReturnPlane { get; set; } = default!;
-        public DbSet<User> User { get; set; } = default!;
+        //add the DbSet, mapping the model to the database, they are virtual because im using them for moq test
+        public virtual DbSet<Package> Package { get; set; } = default!;
+        public virtual DbSet<Plane> Plane { get; set; } = default!;
+        public virtual DbSet<Hotels> Hotels { get; set; } = default!;
+        public virtual DbSet<ReturnPlane> ReturnPlane { get; set; } = default!;
+        public virtual DbSet<User> User { get; set; } = default!;
+        public virtual DbSet<PackageUser> PackageUser { get; set; } = default!;
     }
 }

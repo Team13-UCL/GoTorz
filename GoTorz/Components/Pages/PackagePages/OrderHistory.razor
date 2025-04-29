@@ -1,0 +1,161 @@
+﻿@page "/order-history"
+@using GoTorz.Model
+@using Microsoft.EntityFrameworkCore
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@inject GoTorz.Data.GoTorzContext DbContext
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@rendermode InteractiveServer
+
+<div class="container my-5">
+    <img src="https://gotorz.ae/assets/img/logo-medium.png" alt="Gotorz logo" style="max-width: 200px;" class="d-block mx-auto mb-4" />
+    <h1 class="text-center text-warning mb-4">Your Booking History</h1>
+
+    @if (IsLoading)
+    {
+        <div class="text-center my-5">
+            <div class="spinner-border text-warning" role="status"></div>
+            <p>Loading your bookings...</p>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i> @ErrorMessage
+        </div>
+    }
+    else if (UserBookings?.Any() == true)
+    {
+        <div class="list-group">
+            @foreach (var booking in UserBookings)
+            {
+                <div class="list-group-item mb-3 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5>Booking @GetBookingReference(booking)</h5>
+                            <p class="mb-1">
+                                <i class="fas fa-calendar-alt"></i>
+                                Booked on: @booking.BookingDate.ToString("dd/MM/yyyy")
+                            </p>
+                            <p class="mb-1">
+                                <i class="fas fa-info-circle"></i>
+                                Status: <span class="badge bg-@GetStatusBadgeColor(booking.Status)">@booking.Status</span>
+                            </p>
+                        </div>
+                        <div>
+                            <button class="btn btn-danger btn-sm me-2" @onclick="() => CancelBooking(booking)">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                            <button class="btn btn-success btn-sm" disabled @onclick="() => ProceedToPayment(booking)">
+                                <i class="fas fa-credit-card"></i> Pay Later
+                            </button>
+                        </div>
+                    </div>
+
+                    @if (booking.Package != null)
+                    {
+                        <div class="mt-3 p-3 bg-light rounded">
+                            <h6>Trip Details:</h6>
+                            <p>@booking.Package.Plane.DepartureAirport → @booking.Package.Plane.ArrivalAirport</p>
+                            <p>Hotel: @booking.Package.Hotels.Name</p>
+                            <p>Total: @booking.Package.PackagePrice?.ToString("N2") €</p>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle fa-2x mb-3"></i>
+            <h5>No Bookings Found</h5>
+            <p>You haven't made any bookings yet.</p>
+            <a href="/destinations" class="btn btn-warning mt-3">Browse Destinations</a>
+        </div>
+    }
+</div>
+
+@code {
+    private List<PackageUser> UserBookings { get; set; }
+    private bool IsLoading { get; set; } = true;
+    private string ErrorMessage { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user.Identity is not null && user.Identity.IsAuthenticated)
+            {
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+                if (string.IsNullOrEmpty(userId))
+                {
+                    ErrorMessage = "No user ID found in user claims.";
+                    return;
+                }
+                // Convert string userId to int to match PackageUser.UserID
+                if (int.TryParse(userId, out int userIdInt))
+                UserBookings = await DbContext.PackageUser
+                    .Where(pu => pu.UserID == userIdInt)  // Now comparing int with int
+                    .Include(pu => pu.Package)
+                        .ThenInclude(p => p.Plane)
+                    .Include(pu => pu.Package)
+                        .ThenInclude(p => p.Hotels)
+                    .OrderByDescending(pu => pu.BookingDate)
+                    .ToListAsync();
+            }
+            else
+            {
+                ErrorMessage = "User is not authenticated.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error loading bookings: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private string GetBookingReference(PackageUser booking)
+    {
+        return $"GT-{booking.BookingDate:yyMMdd}-{booking.PackagePlaneId}-{booking.PackageHotelId}-{booking.ReturnPlaneID}";
+    }
+
+    private string GetStatusBadgeColor(string status)
+    {
+        return status switch
+        {
+            "Confirmed" => "success",
+            "Cancelled" => "danger",
+            _ => "secondary"
+        };
+    }
+
+    private async Task CancelBooking(PackageUser booking)
+    {
+        try
+        {
+            booking.Status = "Cancelled";
+            DbContext.PackageUser.Update(booking);
+            await DbContext.SaveChangesAsync();
+            await OnInitializedAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error cancelling booking: {ex.Message}";
+        }
+    }
+
+    private void ProceedToPayment(PackageUser booking)
+    {
+        // Payment logic kommer senere
+    }
+}

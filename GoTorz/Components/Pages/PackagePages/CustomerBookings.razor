@@ -1,0 +1,188 @@
+﻿@page "/CustomerBookings"
+@using GoTorz.Model
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@inject GoTorz.Data.GoTorzContext DbContext
+@inject NavigationManager Navigation
+@attribute [Authorize(Roles = "Sales,Admin")]
+@rendermode InteractiveServer
+@inject ILogger<CustomerBookings> Logger
+
+<div class="container my-5">
+    <img src="https://gotorz.ae/assets/img/logo-medium.png" alt="Gotorz logo" style="max-width: 200px;" class="d-block mx-auto mb-4" />
+    <h1 class="text-center text-warning mb-4">Customer Bookings</h1>
+
+    @if (IsLoading)
+    {
+        <div class="text-center my-5">
+            <div class="spinner-border text-warning" role="status"></div>
+            <p>Loading your bookings...</p>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle"></i> @ErrorMessage
+        </div>
+    }
+    else if (UserBookings?.Any() == true)
+    {
+        <div class="list-group">
+            @foreach (var booking in UserBookings)
+            {
+                <div class="list-group-item mb-3 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5>Booking @GetBookingReference(booking)</h5>
+                            <p class="mb-1">
+                                <i class="fas fa-calendar-alt"></i>
+                                Booked on: @booking.BookingDate.ToString("dd/MM/yyyy")
+                            </p>
+                            <p class="mb-1">
+                                <i class="fas fa-info-circle"></i>
+                                Status: <span class="badge bg-@GetStatusBadgeColor(booking.Status)">@booking.Status</span>
+                            </p>
+                            
+                            @if (booking.User != null)
+                            {
+                                <p class="mb-1">
+                                    <i class="fas fa-user-circle"></i>
+                                    Name: @(string.IsNullOrEmpty(booking.User.Name) ? "Name not available" : booking.User.Name)
+                                </p>
+                                <p class="mb-1">
+                                    <i class="fas fa-envelope"></i>
+                                    Email: @(string.IsNullOrEmpty(booking.User.Email) ? "Email not available" : booking.User.Email)
+                                </p>
+                                <p class="mb-1">
+                                    <i class="fas fa-phone"></i>
+                                    Phone: @(string.IsNullOrEmpty(booking.User.PhoneNumber) ? "Phone number not available" : booking.User.PhoneNumber)
+                                </p>
+                            }
+                            else
+                            {
+                                <p class="mb-1 text-muted">
+                                    <i class="fas fa-user-circle"></i>
+                                    User details not available
+                                </p>
+                            }
+                        </div>
+                    </div>
+
+                    @if (booking.Package != null)
+                    {
+                        <div class="mt-3 p-3 bg-light rounded">
+                            <h6>Trip Details:</h6>
+                            <div class="row">
+                                <!-- Flight Details -->
+                                <div class="col-md-4">
+                                    <p><strong>Flight Details:</strong></p>
+                                    <p>Plane ID: @booking.Package.Plane.PlaneId</p>
+                                    <p>Carrier Code: @booking.Package.Plane.CarrierCode</p>
+                                    <p>Departure Airport: @booking.Package.Plane.DepartureAirport</p>
+                                    <p>Arrival Airport: @booking.Package.Plane.ArrivalAirport</p>
+                                    <p>Start Date: @booking.Package.Plane.StartDate.ToString("yyyy-MM-dd")</p>
+                                    <p>Price: @($"{booking.Package.Plane.Price} €")</p>
+                                </div>
+
+                                <!-- Return Flight Details -->
+                                <div class="col-md-4">
+                                    <p><strong>Return Flight Details:</strong></p>
+                                    <p>Return Plane ID: @booking.Package.ReturnPlane.ReturnPlaneId</p>
+                                    <p>Carrier Code: @booking.Package.ReturnPlane.CarrierCode</p>
+                                    <p>Departure Airport: @booking.Package.ReturnPlane.DepartureAirport</p>
+                                    <p>Arrival Airport: @booking.Package.ReturnPlane.ArrivalAirport</p>
+                                    <p>Return Date: @booking.Package.ReturnPlane.ReturnDate.ToString("yyyy-MM-dd")</p>
+                                    <p>Duration: @booking.Package.ReturnPlane.Duration days</p>
+                                    <p>Price: @($"{booking.Package.ReturnPlane.Price} €")</p>
+                                </div>
+
+                                <!-- Hotel Details -->
+                                <div class="col-md-4">
+                                    <p><strong>Hotel Details:</strong></p>
+                                    <p>Hotel Name: @booking.Package.Hotels.Name</p>
+                                    <p>Check-In Date: @booking.Package.Hotels.CheckInDate.ToString("yyyy-MM-dd")</p>
+                                    <p>Check-Out Date: @booking.Package.Hotels.CheckOutDate.ToString("yyyy-MM-dd")</p>
+                                    <p>Hotel Price: @($"{booking.Package.Hotels.Price} €")</p>
+
+                                    <p><strong>Total Package Price:</strong> @($"{booking.Package.PackagePrice} €")</p>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    
+
+                    }
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle fa-2x mb-3"></i>
+            <h5>No Bookings Found</h5>
+            <p>You haven't made any bookings yet.</p>
+            <a href="/destinations" class="btn btn-warning mt-3">Browse Destinations</a>
+        </div>
+    }
+</div>
+
+@code {
+    private List<PackageUser> UserBookings { get; set; }
+    private bool IsLoading { get; set; } = true;
+    private string ErrorMessage { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // In a real app, you would filter by logged-in user
+            // For now, we'll just get all bookings
+            UserBookings = await DbContext.PackageUser
+                .Include(pu => pu.Package)
+                .ThenInclude(p => p.Plane)
+                .Include(pu => pu.Package)
+                .ThenInclude(p => p.ReturnPlane)
+                .Include(pu => pu.Package)
+                .ThenInclude(p => p.Hotels)
+                .Include(pu => pu.User)
+                .OrderByDescending(pu => pu.BookingDate)
+                .ToListAsync();
+
+            // Log cases where User is null
+            foreach (var booking in UserBookings)
+            {
+                if (booking.User == null)
+                {
+                    Logger.LogWarning("User information is missing for Booking ID: {BookingID}, UserID: {UserID}",
+                        GetBookingReference(booking), booking.UserID);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Error loading bookings: {ex.Message}";
+            Logger.LogError(ex, "An error occurred while loading bookings.");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private string GetBookingReference(PackageUser booking)
+    {
+        // Generate a unique reference using date and IDs
+        return $"GT-{booking.BookingDate:yyMMdd}-{booking.PackagePlaneId}-{booking.PackageHotelId}-{booking.ReturnPlaneID}";
+    }
+
+    private string GetStatusBadgeColor(string status)
+    {
+        return status switch
+        {
+            "Confirmed" => "success",
+            "Cancelled" => "danger",
+            _ => "secondary"
+        };
+    }
+}

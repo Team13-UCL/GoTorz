@@ -10,11 +10,12 @@
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">
-        <div class="nav-item px-3">
+        @* Home not in use *@
+        @* <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                 <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
             </NavLink>
-        </div>
+        </div> *@
 
         <Microsoft.AspNetCore.Components.Authorization.CascadingAuthenticationState>
 
@@ -36,12 +37,17 @@
             <AuthorizeView Roles="Admin"> @*Admin view*@
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="SalesPlanePage">
-                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> SalesPlanePage
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Create Package
+                    </NavLink>
+                </div>                
+                 <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="CustomerBookings">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Customer Bookings
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="SalesHotelPage">
-                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> SalesHotelPage
+                    <NavLink class="nav-link" href="Packages">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Packages
                     </NavLink>
                 </div>
                 @*TLDR ADD EVERYTHING IN HERE, ADMIN NEEDS TO BE ABLE TO SEE EVERYTHING AND ANYTHING*@
@@ -54,10 +60,15 @@
                     <NavLink class="nav-link" href="SalesPlanePage">
                         <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> SalesPlanePage
                     </NavLink>
+                </div>  
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="CustomerBookings">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Customer Bookings
+                    </NavLink>
                 </div>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="SalesHotelPage">
-                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> SalesHotelPage
+                    <NavLink class="nav-link" href="Packages">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Packages
                     </NavLink>
                 </div>
 
@@ -65,15 +76,18 @@
 
             <AuthorizeView Roles="Customer"> @*This is the view for the average user/DefaultUser*@
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="SalesPlanePage">
-                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> SalesPlanePage
-                    </NavLink>
-                </div>
+                <NavLink class="nav-link" href="">
+                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Destinations
+                </NavLink>
+                </div>                
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="SalesHotelPage">
-                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> SalesHotelPage
+                    <NavLink class="nav-link" href="/order-history">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Order History
                     </NavLink>
                 </div>
+				<!--<NavLink class="nav-link" href="PackageHistory">
+					<span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> PackageHistory
+				</NavLink>-->
             </AuthorizeView>
         </Microsoft.AspNetCore.Components.Authorization.CascadingAuthenticationState>
     </nav>
