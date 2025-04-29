@@ -6,6 +6,7 @@
 @inject NavigationManager Navigation
 @attribute [Authorize(Roles = "Sales,Admin")]
 @rendermode InteractiveServer
+@inject ILogger<CustomerBookings> Logger
 
 <div class="container my-5">
     <img src="https://gotorz.ae/assets/img/logo-medium.png" alt="Gotorz logo" style="max-width: 200px;" class="d-block mx-auto mb-4" />
@@ -41,6 +42,29 @@
                                 <i class="fas fa-info-circle"></i>
                                 Status: <span class="badge bg-@GetStatusBadgeColor(booking.Status)">@booking.Status</span>
                             </p>
+                            
+                            @if (booking.User != null)
+                            {
+                                <p class="mb-1">
+                                    <i class="fas fa-user-circle"></i>
+                                    Name: @(string.IsNullOrEmpty(booking.User.Name) ? "Name not available" : booking.User.Name)
+                                </p>
+                                <p class="mb-1">
+                                    <i class="fas fa-envelope"></i>
+                                    Email: @(string.IsNullOrEmpty(booking.User.Email) ? "Email not available" : booking.User.Email)
+                                </p>
+                                <p class="mb-1">
+                                    <i class="fas fa-phone"></i>
+                                    Phone: @(string.IsNullOrEmpty(booking.User.PhoneNumber) ? "Phone number not available" : booking.User.PhoneNumber)
+                                </p>
+                            }
+                            else
+                            {
+                                <p class="mb-1 text-muted">
+                                    <i class="fas fa-user-circle"></i>
+                                    User details not available
+                                </p>
+                            }
                         </div>
                     </div>
 
@@ -121,12 +145,24 @@
                 .ThenInclude(p => p.ReturnPlane)
                 .Include(pu => pu.Package)
                 .ThenInclude(p => p.Hotels)
+                .Include(pu => pu.User)
                 .OrderByDescending(pu => pu.BookingDate)
                 .ToListAsync();
+
+            // Log cases where User is null
+            foreach (var booking in UserBookings)
+            {
+                if (booking.User == null)
+                {
+                    Logger.LogWarning("User information is missing for Booking ID: {BookingID}, UserID: {UserID}",
+                        GetBookingReference(booking), booking.UserID);
+                }
+            }
         }
         catch (Exception ex)
         {
             ErrorMessage = $"Error loading bookings: {ex.Message}";
+            Logger.LogError(ex, "An error occurred while loading bookings.");
         }
         finally
         {

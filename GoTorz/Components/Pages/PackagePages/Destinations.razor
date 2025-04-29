@@ -115,7 +115,6 @@
                                 </div>
                                 <div class="col-md-6">
                                     <p><i class="fas fa-hotel"></i> <strong>Hotel:</strong> @package.Hotels.Name</p>
-                                   
                                     <p><i class="fas fa-clock"></i> <strong>Duration:</strong> @package.ReturnPlane.Duration days</p>
                                 </div>
                             </div>
@@ -125,15 +124,20 @@
                                     <h4 class="text-success mb-0">@package.PackagePrice?.ToString("N2") €</h4>
                                     <small class="text-muted">per person</small>
                                 </div>
-                                <button class="btn btn-warning" @onclick="() => SelectPackage(package)">
-                                    <i class="fas fa-shopping-cart"></i> Book Now
-                                </button>
+                                @if (package.IsBooked)
+                                {
+                                    <span class="badge bg-danger">Already Booked</span>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-warning" @onclick="() => SelectPackage(package)">
+                                        <i class="fas fa-shopping-cart"></i> Book Now
+                                    </button>
+                                }
                             </div>
                         </div>
                     </div>
                 </div>
-
-
             }
 
         </div>
@@ -212,6 +216,7 @@
     private bool HasSearched { get; set; } = false;
     private bool ShowLoginErrorModal { get; set; } = false;
     private string ErrorMessage { get; set; } = "";
+    public bool IsBooked { get; set; }
 
     //Alle vores pakker fra vores database 
     private List<Package> AllPackages { get; set; } = new();
@@ -246,11 +251,32 @@
         try
         {
             // Load all packages with related data
-            AllPackages = await DbContext.Package
+            var packages = await DbContext.Package
                 .Include(p => p.Hotels)
                 .Include(p => p.Plane)
                 .Include(p => p.ReturnPlane)
                 .ToListAsync();
+
+            // Check booking status for each package
+            var bookedPackages = await DbContext.PackageUser
+                .Where(pu => pu.Status == "Confirmed")
+                .ToListAsync();
+
+            AllPackages = packages.Select(p => new Package
+                {
+                    PackageID = p.PackageID,
+                    PlaneId = p.PlaneId,
+                    HotelId = p.HotelId,
+                    ReturnPlaneID = p.ReturnPlaneID,
+                    PackagePrice = p.PackagePrice,
+                    Plane = p.Plane,
+                    ReturnPlane = p.ReturnPlane,
+                    Hotels = p.Hotels,
+                    IsBooked = bookedPackages.Any(bp =>
+                        bp.PackagePlaneId == p.PlaneId &&
+                        bp.PackageHotelId == p.HotelId &&
+                        bp.ReturnPlaneID == p.ReturnPlaneID)
+                }).ToList();
         }
         catch (Exception ex)
         {
