@@ -1,8 +1,10 @@
 ﻿@page "/order-history"
 @using GoTorz.Model
+@using GoTorz.Services
 @using Microsoft.EntityFrameworkCore
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
+@inject StripePaymentService StripePaymentService
 @inject GoTorz.Data.GoTorzContext DbContext
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -47,8 +49,8 @@
                             <button class="btn btn-danger btn-sm me-2" @onclick="() => CancelBooking(booking)">
                                 <i class="fas fa-times"></i> Cancel
                             </button>
-                            <button class="btn btn-success btn-sm" disabled @onclick="() => ProceedToPayment(booking)">
-                                <i class="fas fa-credit-card"></i> Pay Later
+                            <button class="btn btn-success btn-sm" @onclick="() => ProceedToPayment(booking)">
+                                <i class="fas fa-credit-card"></i> Proceed to Payment
                             </button>
                         </div>
                     </div>
@@ -154,8 +156,24 @@
         }
     }
 
-    private void ProceedToPayment(PackageUser booking)
+    private async Task ProceedToPayment(PackageUser booking)
     {
-        // Payment logic kommer senere
+        // Tjekker om booking har en tilknyttet pakke og at pakken har en pris
+        if (booking.Package?.PackagePrice is not null)
+        {
+            // Kalder StripePaymentService for at oprette en Checkout Session
+            // Sender pakkens pris og hotellets navn (hvis hotellet er null, bruges "Unknown Package")
+            var checkoutUrl = await StripePaymentService.CreateCheckoutSessionAsync(
+                booking.Package.PackagePrice.Value,
+                booking.Package.Hotels?.Name ?? "Unknown Package"
+            );
+
+            // Hvis en URL blev genereret korrekt
+            if (!string.IsNullOrEmpty(checkoutUrl))
+            { // Navigerer brugeren til Stripe Checkout siden (true = force reload af browseren)
+                Navigation.NavigateTo(checkoutUrl, true);
+            }
+        }
     }
+
 }
