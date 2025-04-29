@@ -22,5 +22,9 @@ namespace GoTorz.Model
 
         [ForeignKey("HotelId")]
         public Hotels Hotels { get; set; } = default!;
+
+        //  property to indicate booking status, notmapped so the DB does not use it
+        [NotMapped]
+        public bool IsBooked { get; set; }
     }
 }

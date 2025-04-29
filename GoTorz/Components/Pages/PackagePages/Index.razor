@@ -5,6 +5,9 @@
     @using GoTorz.Data
     @implements IAsyncDisposable
     @inject IDbContextFactory<GoTorz.Data.GoTorzContext> DbFactory
+    @using Microsoft.AspNetCore.Authorization
+@attribute [StreamRendering]
+@attribute [Authorize(Roles = "Admin, Sales")]
 
 <PageTitle>Travel Packages</PageTitle>
 

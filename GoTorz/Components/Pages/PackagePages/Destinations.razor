@@ -1,9 +1,14 @@
-﻿@page "/destinations"
+﻿@page "/"
 @using GoTorz.Model
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.EntityFrameworkCore
 @inject GoTorz.Data.GoTorzContext DbContext
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@attribute [StreamRendering]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+   
 
 
 <div class="container my-5">
@@ -62,7 +67,7 @@
             </div>
         </div>
     </div>
-
+   
     @if (IsLoading)
     {
         <div class="text-center my-5">
@@ -86,23 +91,7 @@
             <p>Try adjusting your search criteria or exploring our popular destinations below.</p>
         </div>
 
-    <!--Popular destinations preview-->
-        <h3 class="text-center text-warning mt-5 mb-4">Popular Destinations</h3>
-        <div class="row">
-            @foreach (var destination in PopularDestinations)
-            {
-                <div class="col-md-4 mb-4">
-                    <div class="card shadow-sm h-100">
-                        <img src="@destination.ImageUrl" class="card-img-top" alt="@destination.Name" style="height: 200px; object-fit: cover;">
-                        <div class="card-body text-center">
-                            <h5>@destination.Name</h5>
-                            <p class="text-muted">Starting from @destination.Price.ToString("N2") €</p>
-                            <button class="btn btn-sm btn-outline-warning" @onclick="() => SetSearchTermAsync(destination.Name)">View Packages</button>
-                        </div>
-                    </div>
-                </div>
-            }
-        </div>
+    
     }
 
     else if (FilteredPackages.Count > 0)
@@ -126,7 +115,6 @@
                                 </div>
                                 <div class="col-md-6">
                                     <p><i class="fas fa-hotel"></i> <strong>Hotel:</strong> @package.Hotels.Name</p>
-                                   
                                     <p><i class="fas fa-clock"></i> <strong>Duration:</strong> @package.ReturnPlane.Duration days</p>
                                 </div>
                             </div>
@@ -136,14 +124,84 @@
                                     <h4 class="text-success mb-0">@package.PackagePrice?.ToString("N2") €</h4>
                                     <small class="text-muted">per person</small>
                                 </div>
-                                <button class="btn btn-warning" @onclick="() => SelectPackage(package)">
-                                    <i class="fas fa-shopping-cart"></i> Book Now
-                                </button>
+                                @if (package.IsBooked)
+                                {
+                                    <span class="badge bg-danger">Already Booked</span>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-warning" @onclick="() => SelectPackage(package)">
+                                        <i class="fas fa-shopping-cart"></i> Book Now
+                                    </button>
+                                }
                             </div>
                         </div>
                     </div>
                 </div>
             }
+
+        </div>
+
+    }
+    <!--Popular destinations preview-->
+    <h3 class="text-center text-warning mt-5 mb-4">Popular Destinations</h3>
+    <div class="row">
+        @foreach (var destination in PopularDestinations)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm h-100">
+                    <img src="@destination.ImageUrl" class="card-img-top" alt="@destination.Name" style="height: 200px; object-fit: cover;">
+                    <div class="card-body text-center">
+                        <h5>@destination.Name</h5>
+                        <p class="text-muted">Starting from @destination.Price.ToString("N2") €</p>
+                        <button class="btn btn-sm btn-outline-warning" @onclick="() => SetSearchTermAsync(destination.Name)">View Packages</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h3 class="text-center text-warning">Let's Start Adventures</h3>
+                    <div class="px-4">
+                        <p class="text-center">
+                            We at Gotorz give you, besides the travel experience, the pleasure of adventure and discovering new and enjoyable tourist destinations.
+                            Life is short and the world is very wide, the sooner you start to discover it, the better.
+                        </p>
+                        <p class="text-center">
+                            Gotorz has made achieving happiness and travel easy and convenient in addition to being cheap and accessible to everyone.
+                            Cheap prices with high services - this equation we succeeded in achieving, leaving a large imprint in the world of the travel industry.
+                        </p>
+                        <p class="text-center">
+                            Traveling is a culture that gives you experiences no book or library could provide. It's real, direct contact with life, beauty,
+                            and other cultures. Traveling creates awareness that seeps deep into your consciousness and makes you a storyteller.
+                            Seeing once is better than hearing a hundred times - so don't just hear about travel, go see for yourself.
+                        </p>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @if (ShowLoginErrorModal)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title text-danger">Login Required</h5>
+                        <button type="button" class="btn-close" @onclick="CloseLoginErrorModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>You must be logged in to confirm a booking. Please log in to continue.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" @onclick="RedirectToLogin">Go to Login</button>
+                    </div>
+                </div>
+            </div>
         </div>
     }
 </div>
@@ -156,7 +214,9 @@
     private bool SortByDate { get; set; } = false;
     private bool IsLoading { get; set; } = false;
     private bool HasSearched { get; set; } = false;
+    private bool ShowLoginErrorModal { get; set; } = false;
     private string ErrorMessage { get; set; } = "";
+    public bool IsBooked { get; set; }
 
     //Alle vores pakker fra vores database 
     private List<Package> AllPackages { get; set; } = new();
@@ -191,11 +251,32 @@
         try
         {
             // Load all packages with related data
-            AllPackages = await DbContext.Package
+            var packages = await DbContext.Package
                 .Include(p => p.Hotels)
                 .Include(p => p.Plane)
                 .Include(p => p.ReturnPlane)
                 .ToListAsync();
+
+            // Check booking status for each package
+            var bookedPackages = await DbContext.PackageUser
+                .Where(pu => pu.Status == "Confirmed")
+                .ToListAsync();
+
+            AllPackages = packages.Select(p => new Package
+                {
+                    PackageID = p.PackageID,
+                    PlaneId = p.PlaneId,
+                    HotelId = p.HotelId,
+                    ReturnPlaneID = p.ReturnPlaneID,
+                    PackagePrice = p.PackagePrice,
+                    Plane = p.Plane,
+                    ReturnPlane = p.ReturnPlane,
+                    Hotels = p.Hotels,
+                    IsBooked = bookedPackages.Any(bp =>
+                        bp.PackagePlaneId == p.PlaneId &&
+                        bp.PackageHotelId == p.HotelId &&
+                        bp.ReturnPlaneID == p.ReturnPlaneID)
+                }).ToList();
         }
         catch (Exception ex)
         {
@@ -252,16 +333,33 @@
     }
 
 
-    private void SelectPackage(Package package)
+    private async Task<bool> IsUserLoggedInAsync()
     {
-        // Navigate to a booking page or details page for this package
-        Navigation.NavigateTo($"/book-package/{package.PlaneId}/{package.HotelId}/{package.ReturnPlaneID}");
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        return user.Identity != null && user.Identity.IsAuthenticated;
     }
 
-    private class Destination
+    private async void SelectPackage(Package package)
     {
-        public string Name { get; set; }
-        public string ImageUrl { get; set; }
-        public decimal Price { get; set; }
+        if (!await IsUserLoggedInAsync())
+        {
+            ShowLoginErrorModal = true; // Show the login error modal
+        }
+        else
+        {
+            // Navigate to the booking page if logged in
+            Navigation.NavigateTo($"/book-package/{package.PlaneId}/{package.HotelId}/{package.ReturnPlaneID}");
+        }
     }
+    private void CloseLoginErrorModal()
+    {
+        ShowLoginErrorModal = false; // Close the modal
+    }
+
+    private void RedirectToLogin()
+    {
+        Navigation.NavigateTo("/login"); // Redirect to the login page
+    }   
 }

@@ -26,7 +26,7 @@
             <i class="fas fa-exclamation-triangle"></i> @ErrorMessage
         </div>
         <div class="text-center mt-3">
-            <a href="/destinations" class="btn btn-outline-secondary">
+            <a href="/" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left"></i> Back to Destinations
             </a>
         </div>
@@ -60,7 +60,7 @@
 
         <!-- Action Buttons -->
         <div class="d-flex justify-content-between mt-4">
-            <a href="/destinations" class="btn btn-outline-secondary btn-lg">
+            <a href="/" class="btn btn-outline-secondary btn-lg">
                 <i class="fas fa-arrow-left"></i> Cancel
             </a>
             
@@ -75,7 +75,7 @@
             <i class="fas fa-exclamation-triangle fa-2x mb-3"></i>
             <h5>Package Not Found</h5>
             <p>We couldn't find the travel package you're looking for.</p>
-            <a href="/destinations" class="btn btn-warning mt-3">Browse Destinations</a>
+            <a href="/" class="btn btn-warning mt-3">Browse Destinations</a>
         </div>
     }
 
@@ -94,7 +94,28 @@
                         <p>Booking reference: <strong>@BookingReference</strong></p>
                     </div>
                     <div class="modal-footer">
-                        <a href="/destinations" class="btn btn-success">Continue Shopping</a>
+                        <a href="/" class="btn btn-success">Continue Shopping</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title"><i class="fas fa-exclamation-circle"></i> Booking Error</h5>
+                        <button type="button" class="btn-close" @onclick="() => ErrorMessage = string.Empty"></button>
+                    </div>
+                    <div class="modal-body text-center">
+                        <i class="fas fa-times-circle fa-4x text-danger mb-3"></i>
+                        <h4>Booking Failed</h4>
+                        <p>@ErrorMessage</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" @onclick="() => ErrorMessage = string.Empty">Close</button>
                     </div>
                 </div>
             </div>
@@ -172,7 +193,6 @@
 
         try
         {
-            //Tjekker om brugeren er logget ind
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
 
@@ -180,21 +200,19 @@
             {
                 throw new Exception("You must be logged in to make a booking.");
             }
-            //Henter brugerens ID fra authentication claims
+
             var userIdString = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(userIdString, out int userId))
             {
                 throw new Exception("Invalid user ID.");
             }
 
-            // Finder brugeren i databasen
             var bookingUser = await DbContext.User.FindAsync(userId);
             if (bookingUser == null)
             {
                 throw new Exception("User not found in database.");
             }
 
-            // Finder den valgte pakke i databasen
             var package = await DbContext.Package
                 .FirstOrDefaultAsync(p =>
                     p.PlaneId == CurrentPackage.PlaneId &&
@@ -206,27 +224,38 @@
                 throw new Exception("Package not found.");
             }
 
-            // Opretter en ny booking i PackageUser tabellen
+            // Check if the package is already booked
+            var existingBooking = await DbContext.PackageUser
+                .FirstOrDefaultAsync(pu =>
+                    pu.PackagePlaneId == package.PlaneId &&
+                    pu.PackageHotelId == package.HotelId &&
+                    pu.ReturnPlaneID == package.ReturnPlaneID &&
+                    pu.Status == "Confirmed");
+
+            if (existingBooking != null)
+            {
+                throw new Exception("This package has already been booked.");
+            }
+
             var packageUser = new PackageUser
                 {
-                    PackagePlaneId = CurrentPackage.PlaneId, //Fly ID til udrejse
-                    PackageHotelId = CurrentPackage.HotelId, //Hotel ID
-                    ReturnPlaneID = CurrentPackage.ReturnPlaneID, //Fly ID til hjemrejse
-                    UserID = bookingUser.UserID, //Bruger ID
-                    BookingDate = DateTime.Now, //Nuværende dato og tidspunkt
-                    Status = "Confirmed" //Status for bookingen
+                    PackagePlaneId = CurrentPackage.PlaneId,
+                    PackageHotelId = CurrentPackage.HotelId,
+                    ReturnPlaneID = CurrentPackage.ReturnPlaneID,
+                    UserID = bookingUser.UserID,
+                    BookingDate = DateTime.Now,
+                    Status = "Confirmed"
                 };
-                //Tilføjer booking til databasen og gemmer det 
+
             DbContext.PackageUser.Add(packageUser);
             await DbContext.SaveChangesAsync();
 
-            // Genererer en unik booking reference 
             BookingReference = $"GT-{DateTime.Now:yyMMdd}-{bookingUser.UserID}";
             BookingComplete = true;
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Der opstod en fejl under bookingen: {ex.Message}";
+            ErrorMessage = ex.Message; // Show user-friendly error
         }
         finally
         {
