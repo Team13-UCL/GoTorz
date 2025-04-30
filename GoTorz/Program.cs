@@ -45,6 +45,7 @@ builder.Services.AddAuthentication();
 builder.Services.AddScoped<AmadeusAuthService>();
 builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 
+builder.Services.AddScoped<StripePaymentService>();
 // Konfigurer Serilog
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()  // Logger til konsollen
