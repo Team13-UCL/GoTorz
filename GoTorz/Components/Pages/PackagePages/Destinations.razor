@@ -99,50 +99,55 @@
         <h3 class="text-center mb-4">Available Travel Packages for "@SearchTerm"</h3>
 
         <div class="row">
-            @foreach (var package in FilteredPackages)
-            {
-                <div class="col-md-6 mb-4">
-                    <div class="card shadow-sm h-100">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0">@package.Plane.ArrivalAirport - @package.Hotels.Name</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <p><i class="fas fa-plane-departure"></i> <strong>From:</strong> @package.Plane.DepartureAirport</p>
-                                    <p><i class="fas fa-calendar-alt"></i> <strong>Departure:</strong> @package.Plane.StartDate.ToString("dd/MM/yyyy")</p>
-                                    <p><i class="fas fa-calendar-alt"></i> <strong>Return:</strong> @package.ReturnPlane.ReturnDate.ToString("dd/MM/yyyy")</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <p><i class="fas fa-hotel"></i> <strong>Hotel:</strong> @package.Hotels.Name</p>
-                                    <p><i class="fas fa-clock"></i> <strong>Duration:</strong> @package.ReturnPlane.Duration days</p>
-                                </div>
-                            </div>
-                            <hr />
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h4 class="text-success mb-0">@package.PackagePrice?.ToString("N2") €</h4>
-                                    <small class="text-muted">per person</small>
-                                </div>
-                                @if (package.IsBooked)
-                                {
-                                    <span class="badge bg-danger">Already Booked</span>
-                                }
-                                else
-                                {
-                                    <button class="btn btn-warning" @onclick="() => SelectPackage(package)">
-                                        <i class="fas fa-shopping-cart"></i> Book Now
-                                    </button>
-                                }
-                            </div>
-                        </div>
+           @foreach (var package in FilteredPackages)
+{
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <!-- Hotel image moved inside the card -->
+            <div class="text-center">
+                <img src="@package.Hotels.ImageUrl" 
+     alt="Hotel image"
+     class="card-img-top" 
+     style="height: 200px; object-fit: cover;" />
+            </div>
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">@package.Plane.ArrivalAirport - @package.Hotels.Name</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><i class="fas fa-plane-departure"></i> <strong>From:</strong> @package.Plane.DepartureAirport</p>
+                        <p><i class="fas fa-calendar-alt"></i> <strong>Departure:</strong> @package.Plane.StartDate.ToString("dd/MM/yyyy")</p>
+                        <p><i class="fas fa-calendar-alt"></i> <strong>Return:</strong> @package.ReturnPlane.ReturnDate.ToString("dd/MM/yyyy")</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><i class="fas fa-hotel"></i> <strong>Hotel:</strong> @package.Hotels.Name</p>
+                        <p><i class="fas fa-clock"></i> <strong>Duration:</strong> @package.ReturnPlane.Duration days</p>
                     </div>
                 </div>
-            }
-
+                <hr />
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="text-success mb-0">@package.PackagePrice?.ToString("N2") €</h4>
+                        <small class="text-muted">per person</small>
+                    </div>
+                    @if (package.IsBooked)
+                    {
+                        <span class="badge bg-danger">Already Booked</span>
+                    }
+                    else
+                    {
+                        <button class="btn btn-warning" @onclick="() => SelectPackage(package)">
+                            <i class="fas fa-shopping-cart"></i> Book Now
+                        </button>
+                    }
+                </div>
+            </div>
         </div>
-
-    }
+    </div>
+}
+</div  >
+	}
     <!--Popular destinations preview-->
     <h3 class="text-center text-warning mt-5 mb-4">Popular Destinations</h3>
     <div class="row">
