@@ -3,26 +3,45 @@
 @inherits LayoutComponentBase
 @inject AuthenticationStateProvider auth
 
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="/">GoTorz</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/">Home</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/Register">Register</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/Login">Login</NavLink>
+                </li>
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-
-    <main>
-        <div class="top-row px-4">
+@*                 <li class="nav-item">
+                    <NavLink class="nav-link" href="/BrugTilSenere">BrugTilSenere</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/BrugTilSenere">BrugTilSenere</NavLink>
+                </li> *@
+            </ul>
             <CascadingAuthenticationState>
                 <AuthorizeView>
-                    Hello @email - @role <a href="/logout">Logout</a>
+                    <div class="d-flex align-items-center text-white">
+                        Hello @email (@role) &nbsp; <a class="btn btn-outline-light btn-sm" href="/logout">Logout</a>
+                    </div>
                 </AuthorizeView>
             </CascadingAuthenticationState>
         </div>
+    </div>
+</nav>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+<main class="container mt-4">
+    @Body
+</main>
 
 <div id="blazor-error-ui">
     An unhandled error has occurred.
@@ -30,18 +49,18 @@
     <a class="dismiss">🗙</a>
 </div>
 
-@code{
-    public string email{ get; set; }
-    public string role { get; set; }
+@code {
+    public string email { get; set; } = "";
+    public string role { get; set; } = "";
 
     protected override async Task OnInitializedAsync()
     {
         var state = await auth.GetAuthenticationStateAsync();
         var user = state.User;
-        if (user.Identity.IsAuthenticated)
+        if (user.Identity?.IsAuthenticated == true)
         {
-            email = user.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Name)?.Value;
-            role = user.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Role)?.Value;
+            email = user.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Name)?.Value ?? "";
+            role = user.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Role)?.Value ?? "";
         }
     }
 }
