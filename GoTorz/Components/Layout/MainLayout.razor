@@ -20,7 +20,10 @@
 
         <article class="content px-4">
             @Body
-        </article>
+        </article>      
+                <div class="chat-widget-container p-3">
+                    <GoTorz.Components.Shared.Chat />
+                </div>          
     </main>
 </div>
 
@@ -31,7 +34,7 @@
 </div>
 
 @code{
-    public string email{ get; set; }
+    public string email { get; set; }
     public string role { get; set; }
 
     protected override async Task OnInitializedAsync()

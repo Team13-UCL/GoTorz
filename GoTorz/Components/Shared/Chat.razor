@@ -1,0 +1,163 @@
+﻿@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager NavigationManager
+@implements IAsyncDisposable
+
+<div class="chat-container card shadow-sm">
+    <div class="card-header bg-dark text-white">Site Chat</div>
+    <div class="chat-messages card-body" style="height: 300px; overflow-y: scroll;" id="chatMessagesDiv">
+        <ul class="list-unstyled">
+            @foreach (var message in messages)
+            {
+                <li>@((MarkupString)message)</li>
+            }
+        </ul>
+        <div id="scrollmarker"></div>
+    </div>
+    <div class="chat-input card-footer">
+        @if (IsConnected)
+        {
+            <div class="input-group">
+                <input @bind="messageInput" @bind:event="oninput" @onkeyup="HandleInputKeyup" class="form-control" placeholder="Enter message..." disabled="@(!IsConnected)" />
+                <button class="btn btn-primary" @onclick="SendMessageAsync" disabled="@(!IsConnected || string.IsNullOrWhiteSpace(messageInput))">
+                    <i class="fas fa-paper-plane"></i> Send
+                </button>
+            </div>
+        }
+        else if (hubConnection?.State == HubConnectionState.Connecting || hubConnection?.State == HubConnectionState.Reconnecting)
+        {
+            <div class="text-muted text-center">Connecting to chat...</div>
+        }
+        else // Betyder typisk Disconnected eller Initial state
+        {
+            <div class="text-danger text-center">Chat disconnected.</div>
+        }
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="text-danger small mt-1">@errorMessage</div>
+        }
+    </div>
+</div>
+
+@code {
+    private HubConnection? hubConnection;
+    private List<string> messages = new List<string>();
+    private string? messageInput;
+    private string? errorMessage;
+    private bool hasAttemptedConnection = false;
+
+    private bool IsConnected => hubConnection?.State == HubConnectionState.Connected;
+
+    protected override Task OnInitializedAsync()
+    {
+        Console.WriteLine("Chat.razor: OnInitializedAsync - Building HubConnection..."); // LOG
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/chathub"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        Console.WriteLine($"Chat.razor: OnInitializedAsync - HubConnection built. Is null? {hubConnection == null}"); // LOG
+
+        hubConnection.On<string, string>("ReceiveMessage", (user, message) =>
+        {
+            Console.WriteLine($"Chat.razor: ReceiveMessage received - User: '{user}', Message: '{message}'"); // LOG
+            var formattedUser = $"<strong>{System.Net.WebUtility.HtmlEncode(user)}:</strong>";
+            var encodedMsg = $"{formattedUser} {System.Net.WebUtility.HtmlEncode(message)}";
+            messages.Add(encodedMsg);
+            InvokeAsync(StateHasChanged);
+        });
+
+        hubConnection.Closed += HubConnection_Closed;
+        hubConnection.Reconnecting += HubConnection_Reconnecting;
+        hubConnection.Reconnected += HubConnection_Reconnected;
+
+        return Task.CompletedTask;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        Console.WriteLine($"Chat.razor: OnAfterRenderAsync called. firstRender: {firstRender}, hasAttemptedConnection: {hasAttemptedConnection}, hubConnection is null? {hubConnection == null}, State: {hubConnection?.State}"); // LOG
+        if (firstRender && hubConnection is not null && !hasAttemptedConnection)
+        {
+            hasAttemptedConnection = true;
+            try
+            {
+                Console.WriteLine($"Chat.razor: Attempting hubConnection.StartAsync... Current State: {hubConnection.State}"); // LOG
+                await hubConnection.StartAsync();
+                Console.WriteLine($"Chat.razor: hubConnection.StartAsync() completed. State: {hubConnection.State}"); // LOG
+                errorMessage = null; // Nulstil fejl ved succesfuld start
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"!!! Chat.razor: hubConnection.StartAsync() FAILED: {ex.ToString()}"); // DETALJERET LOG
+                errorMessage = $"Error connecting: {ex.Message}";
+                if (ex.InnerException != null) { errorMessage += $" Inner: {ex.InnerException.Message}"; }
+                if (ex.Message.Contains("401")) { errorMessage += " (Unauthorized)"; } // Behold denne tjek
+            }
+            await InvokeAsync(StateHasChanged); // Opdater UI uanset hvad
+        }
+    }
+
+    private async Task HandleInputKeyup(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") { await SendMessageAsync(); }
+    }
+
+    private async Task SendMessageAsync()
+    {
+        Console.WriteLine($"Chat.razor: SendMessageAsync called. IsConnected: {IsConnected}, Message: '{messageInput}'"); // LOG
+        if (IsConnected && !string.IsNullOrWhiteSpace(messageInput))
+        {
+            try
+            {
+                Console.WriteLine($"Chat.razor: Attempting hubConnection.SendAsync('SendMessage', '{messageInput}')..."); // LOG
+                await hubConnection.SendAsync("SendMessage", messageInput);
+                Console.WriteLine("Chat.razor: hubConnection.SendAsync completed."); // LOG
+                messageInput = string.Empty;
+                errorMessage = null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"!!! Chat.razor: SendMessageAsync FAILED: {ex.ToString()}"); // DETALJERET LOG
+                errorMessage = $"Send error: {ex.Message}";
+            }
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Console.WriteLine("Chat.razor: DisposeAsync called."); // LOG
+        if (hubConnection is not null)
+        {
+            hubConnection.Closed -= HubConnection_Closed;
+            hubConnection.Reconnecting -= HubConnection_Reconnecting;
+            hubConnection.Reconnected -= HubConnection_Reconnected;
+            Console.WriteLine("Chat.razor: Attempting hubConnection.DisposeAsync..."); // LOG
+            await hubConnection.DisposeAsync();
+            Console.WriteLine("Chat.razor: hubConnection.DisposeAsync completed."); // LOG
+        }
+    }
+
+    // Callbacks for forbindelsesstatus med logging
+    private Task HubConnection_Closed(Exception? arg)
+    {
+        Console.WriteLine($"!!! Chat.razor: HubConnection_Closed callback executed. Exception: {arg?.ToString() ?? "None"}"); // LOG EXCEPTION
+        errorMessage = $"Chat connection closed{(arg == null ? "." : $": {arg.Message}")}";
+        InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
+    }
+    private Task HubConnection_Reconnecting(Exception? arg)
+    {
+        Console.WriteLine($"Chat.razor: HubConnection_Reconnecting callback executed. Exception: {arg?.ToString() ?? "None"}"); // LOG
+        errorMessage = "Reconnecting...";
+        InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
+    }
+    private Task HubConnection_Reconnected(string? arg)
+    {
+        Console.WriteLine($"Chat.razor: HubConnection_Reconnected callback executed. ConnectionId: {arg ?? "N/A"}"); // LOG
+        errorMessage = null;
+        InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
+    }
+}

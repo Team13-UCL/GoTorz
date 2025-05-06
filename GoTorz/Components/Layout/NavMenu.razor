@@ -19,7 +19,8 @@
         <Microsoft.AspNetCore.Components.Authorization.CascadingAuthenticationState>
 
             <AuthorizeView>
-                <NotAuthorized> @*This is the view for the unauthorized users*@
+                <NotAuthorized>
+                    @*This is the view for the unauthorized users*@
                     <div class="nav-item px-3">
                         <NavLink class="nav-link" href="login">
                             <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Login
@@ -33,7 +34,8 @@
                 </NotAuthorized>
             </AuthorizeView>
 
-            <AuthorizeView Roles="Admin"> @*Admin view*@
+            <AuthorizeView Roles="Admin">
+                @*Admin view*@
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="SalesPlanePage">
                         <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> SalesPlanePage
@@ -44,7 +46,7 @@
                         <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> SalesHotelPage
                     </NavLink>
                 </div>
-                 <div class="nav-item px-3">
+                <div class="nav-item px-3">
                     <NavLink class="nav-link" href="CustomerBookings">
                         <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Customer Bookings
                     </NavLink>
@@ -54,7 +56,7 @@
 
 
             @*This is the View for the Sales department*@
-            <AuthorizeView Roles="Sales"> 
+            <AuthorizeView Roles="Sales">
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="SalesPlanePage">
                         <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> SalesPlanePage
@@ -68,11 +70,12 @@
 
             </AuthorizeView>
 
-            <AuthorizeView Roles="Customer"> @*This is the view for the average user/DefaultUser*@
+            <AuthorizeView Roles="Customer">
+                @*This is the view for the average user/DefaultUser*@
                 <div class="nav-item px-3">
-                <NavLink class="nav-link" href="Destinations">
-                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Destinations
-                </NavLink>
+                    <NavLink class="nav-link" href="Destinations">
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Destinations
+                    </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="SalesPlanePage">
@@ -89,11 +92,10 @@
                         <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Order History
                     </NavLink>
                 </div>
-				<!--<NavLink class="nav-link" href="PackageHistory">
-					<span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> PackageHistory
-				</NavLink>-->
+                <!--<NavLink class="nav-link" href="PackageHistory">
+                    <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> PackageHistory
+                </NavLink>-->
             </AuthorizeView>
         </Microsoft.AspNetCore.Components.Authorization.CascadingAuthenticationState>
     </nav>
 </div>
-
