@@ -62,6 +62,7 @@
                             <p>@booking.Package.Plane.DepartureAirport → @booking.Package.Plane.ArrivalAirport</p>
                             <p>Hotel: @booking.Package.Hotels.Name</p>
                             <p>Total: @booking.Package.PackagePrice?.ToString("N2") €</p>
+                            <img src="@booking.Package.Hotels.ImageUrl" alt="Hotel Image" class="img-fluid rounded"style="max-width: 500px; max-height: 400px; object-fit: cover;" />
                         </div>
                     }
                 </div>
