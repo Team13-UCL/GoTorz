@@ -1,4 +1,4 @@
-﻿@* GoTorz/Components/Shared/GlobalChatWidget.razor (ULTRA-SIMPLIFIED - Reverting to @bind) *@
+﻿@* GoTorz/Components/Shared/GlobalChatWidget.razor (Connected - Send Button ALWAYS ENABLED TEST) *@
 @using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
@@ -27,12 +27,12 @@
         </div>
 
         <div style="display: flex; gap: 8px;">
-            @* --- MODIFIED LINE BELOW --- *@
             <input @bind="messageInput" @bind:event="oninput" placeholder="Message..." style="flex-grow: 1; padding: 5px;"
                    disabled="@(hubConnection == null || hubConnection.State != HubConnectionState.Connected)" />
-            <button @onclick="TrySendMessageAsync" style="padding: 5px 10px;"
-                    disabled="@IsSendButtonDisabled()">
-                Send
+
+            <button @onclick="TrySendMessageAsync" style="padding: 5px 10px;" disabled="false">
+                @* Button is always enabled in UI *@
+                Send (Always Enabled)
             </button>
         </div>
     </div>
@@ -41,38 +41,17 @@
 @code {
     private HubConnection? hubConnection;
     private List<ChatMessageDto> messages = new List<ChatMessageDto>();
-    private string? messageInput; // This will be bound by @bind
+    private string? messageInput;
 
     private bool clientIsAuthenticated = false;
     private string? clientUserName;
     private string connectionStateForDisplay = "Not Connected";
 
-    // REMOVED UpdateMessageInput method - @bind will handle it.
-
-    private bool IsSendButtonDisabled()
+    private bool IsSendButtonDisabled() // This method is effectively bypassed by disabled="false" on the button
     {
-        bool isDisabled = hubConnection == null ||
-                          hubConnection.State != HubConnectionState.Connected ||
-                          string.IsNullOrWhiteSpace(messageInput); // This check remains the same
-        // Console.WriteLine($"UltraSimpleWidget: IsSendButtonDisabled evaluated. Result: {isDisabled}. MsgInput: '{messageInput}'"); // Add log here if needed
-        return isDisabled;
+        return false;
     }
 
-    // --- The rest of your @code block (OnInitializedAsync, HandleAuthStateChanged, etc.) remains THE SAME ---
-    // --- as the previous version where we added StateHasChanged() to UpdateMessageInput ---
-    // --- Just make sure the `UpdateMessageInput` method is now GONE. ---
-
-    // PASTE THE REST OF THE PREVIOUS @CODE BLOCK HERE (excluding UpdateMessageInput):
-    // OnInitializedAsync
-    // HandleAuthStateChanged
-    // ProcessAuthState
-    // ConnectToHubAsync
-    // DisconnectFromHubAsync
-    // TrySendMessageAsync
-    // ChatMessageDto class
-    // DisposeAsync
-
-    // --- For clarity, here are the unchanged methods that should be part of the @code block ---
     protected override async Task OnInitializedAsync()
     {
         Console.WriteLine("UltraSimpleWidget: OnInitializedAsync START");
@@ -154,25 +133,34 @@
 
     private async Task TrySendMessageAsync()
     {
-        Console.WriteLine($"UltraSimpleWidget: TrySendMessageAsync called. Hub State: {hubConnection?.State}, Message: '{messageInput}'");
-        if (IsSendButtonDisabled())
+        Console.WriteLine($"UltraSimpleWidget: TrySendMessageAsync called. Hub State: {hubConnection?.State}, C# messageInput: '{messageInput}'"); // Log C# field
+
+        // Internal guards within the method are still active and important
+        if (hubConnection == null || hubConnection.State != HubConnectionState.Connected)
         {
-            Console.WriteLine($"UltraSimpleWidget: Send button is disabled, send aborted. Conditions were: HubNull: {hubConnection == null}, HubState: {hubConnection?.State}, MsgInputEmpty: {string.IsNullOrWhiteSpace(messageInput)}");
+            Console.WriteLine($"UltraSimpleWidget: Send aborted by internal guard. Hub not connected. Current State: {hubConnection?.State}");
             return;
         }
+        // This check will use the C# messageInput field's value
+        if (string.IsNullOrWhiteSpace(messageInput))
+        {
+            Console.WriteLine($"UltraSimpleWidget: Send aborted by internal guard. C# messageInput is empty or whitespace ('{messageInput}').");
+            return;
+        }
+
         try
         {
+            // It will send the current value of the C# messageInput field
             await hubConnection.SendAsync("SendMessage", messageInput);
             Console.WriteLine($"UltraSimpleWidget: Message '{messageInput}' SENT to hub.");
-            messageInput = string.Empty; // This should trigger a re-render via @bind
+            messageInput = string.Empty; // Clear the C# field
         }
         catch (Exception ex)
         {
             Console.WriteLine($"UltraSimpleWidget: SendMessage FAILED: {ex.ToString()}");
             messages.Add(new ChatMessageDto { User = "System", Message = $"Send Error: {ex.Message.Substring(0, Math.Min(ex.Message.Length, 40))}" });
-            await InvokeAsync(StateHasChanged); // Ensure error message is shown
         }
-        // No explicit StateHasChanged() here, @bind should handle UI update for messageInput clearing
+        await InvokeAsync(StateHasChanged); // To update UI (clear input, show error, show sent message if it echoes back)
     }
 
     public class ChatMessageDto { public string User { get; set; } = ""; public string Message { get; set; } = ""; }
