@@ -42,6 +42,7 @@ builder.Services.AddAuthentication();
 builder.Services.AddScoped<AmadeusAuthService>();
 builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 
+builder.Services.AddScoped<StripePaymentService>();
 // Konfigurer Serilog
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()  // Logger til konsollen
@@ -49,7 +50,7 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 
 // Tilføj Serilog som Logger
-builder.Host.UseSerilog();
+//builder.Host.UseSerilog();
 
 builder.Services.AddQuickGridEntityFrameworkAdapter();
 

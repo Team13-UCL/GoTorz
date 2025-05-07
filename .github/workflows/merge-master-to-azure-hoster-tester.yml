@@ -1,0 +1,86 @@
+name: Sync, Build, and Deploy ASP.Net Core app to Azure Web App - gotorzz
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  sync-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge master into azure-hoster-tester
+        run: |
+          git checkout azure-hoster-tester
+          git merge origin/master --no-edit || echo "Already up to date"
+          git push origin azure-hoster-tester
+
+  build:
+    needs: sync-branch
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: azure-hoster-tester
+
+      - name: Set up .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      - name: Build with dotnet
+        run: dotnet build --configuration Release
+
+      - name: dotnet publish
+        run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: .net-app
+          path: ${{env.DOTNET_ROOT}}/myapp
+
+  deploy:
+    runs-on: windows-latest
+    needs: build
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: .net-app
+      
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_3BBC647D90984987BDC5E6B6188C3A0F }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5B7B3E3D35764C4D971881AA4DFC9C16 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_9180199C0F2745A4B9B2E6BFA160DAFD }}
+
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'gotorzz'
+          slot-name: 'Production'
+          package: .

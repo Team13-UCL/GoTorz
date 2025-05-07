@@ -81,25 +81,46 @@ else
                             {
                                 @foreach (var itinerary in flight.Itineraries)
                                 {
-                                    @foreach (var segment in itinerary.Segments)
-                                    {
-                                        <tr>
-                                            <td>@flight.Id</td>
-                                            <td>@segment.Departure.IataCode <br /><small class="text-muted">@segment.Departure.At</small></td>
-                                            <td>@segment.Arrival.IataCode <br /><small class="text-muted">@segment.Arrival.At</small></td>
-                                            <td>@segment.CarrierCode @segment.FlightNumber</td>
-                                            <td><strong>@flight.Price.Currency @flight.Price.Total</strong></td>
-                                            <td>
-                                                <button @onclick="() => SelectPlaneOffer(segment.Departure.IataCode, segment.Arrival.IataCode, segment.CarrierCode + segment.FlightNumber, flight.Price.Total)"
-                                                        class="btn btn-sm btn-success">
-                                                    <i class="fas fa-check-circle"></i> Select
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    }
+                                    <tr>
+                                        <td>@flight.Id</td>
+                                        <td>
+                                            @foreach (var segment in itinerary.Segments)
+                                            {
+                                                <div>
+                                                    <strong>@segment.Departure.IataCode</strong>
+                                                    <br />
+                                                    <small class="text-muted">@segment.Departure.At.ToString("MMM dd, HH:mm")</small>
+                                                </div>
+                                            }
+                                        </td>
+                                        <td>
+                                            @foreach (var segment in itinerary.Segments)
+                                            {
+                                                <div>
+                                                    <strong>@segment.Arrival.IataCode</strong>
+                                                    <br />
+                                                    <small class="text-muted">@segment.Arrival.At.ToString("MMM dd, HH:mm")</small>
+                                                </div>
+                                            }
+                                        </td>
+                                        <td>
+                                            @foreach (var segment in itinerary.Segments)
+                                            {
+                                                <div>@segment.CarrierCode @segment.FlightNumber</div>
+                                            }
+                                        </td>
+                                        <td><strong>@flight.Price.Currency @flight.Price.Total</strong></td>
+                                        <td>
+                                            <button @onclick="() => SelectPlaneOffer(itinerary.Segments.First().Departure.IataCode, itinerary.Segments.Last().Arrival.IataCode, itinerary.Segments.First().CarrierCode + itinerary.Segments.First().FlightNumber, flight.Price.Total)"
+                                                    class="btn btn-sm btn-success">
+                                                <i class="fas fa-check-circle"></i> Select
+                                            </button>
+                                        </td>
+                                    </tr>
                                 }
                             }
                         </tbody>
+
                     </table>
                 </div>
             </div>
@@ -169,6 +190,19 @@ else
     {
         try
         {
+            // Iterate through all segments to capture layovers
+            var layovers = new List<string>();
+            foreach (var flight in FlightResults)
+            {
+                foreach (var itinerary in flight.Itineraries)
+                {
+                    foreach (var segment in itinerary.Segments)
+                    {
+                        layovers.Add($"{segment.Departure.IataCode} → {segment.Arrival.IataCode}");
+                    }
+                }
+            }
+
             var plane = new Plane
                 {
                     DepartureAirport = departure,
@@ -181,10 +215,9 @@ else
             DbContext.Plane.Add(plane);
             await DbContext.SaveChangesAsync();
 
-            Logger.LogInformation("Flight details saved successfully.");
+            Logger.LogInformation("Flight details saved successfully with layovers: {Layovers}", string.Join(", ", layovers));
 
-			// Navigate to the return flight selection page with the PlaneId, we do this to avoid passing the entire Plane object and avoid serialization issues, 
-			// hvis der er et mellemrum eller andet som ikke må være i url så kan det give problemer
+            // Navigate to the return flight selection page
             var departureEncoded = Uri.EscapeDataString(departure);
             var arrivalEncoded = Uri.EscapeDataString(arrival);
             var carrierEncoded = Uri.EscapeDataString(carrier);

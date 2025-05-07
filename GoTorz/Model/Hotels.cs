@@ -8,6 +8,7 @@ namespace GoTorz.Model
         public int HotelID { get; set; }
         public string Name { get; set; }        
         public decimal Price { get; set; }
+        public string? ImageUrl { get; set; } // URL til billeder af hotel
 
         public DateOnly CheckInDate { get; set; }
 
