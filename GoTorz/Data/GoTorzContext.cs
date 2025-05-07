@@ -53,12 +53,12 @@ namespace GoTorz.Data
             base.OnModelCreating(modelBuilder);
         }
 
-        //add the DbSet, mapping the model to the database
-        public DbSet<Package> Package { get; set; } = default!;
-        public DbSet<Plane> Plane { get; set; } = default!;
-        public DbSet<Hotels> Hotels { get; set; } = default!;
-        public DbSet<ReturnPlane> ReturnPlane { get; set; } = default!;
-        public DbSet<User> User { get; set; } = default!;
-        public DbSet<PackageUser> PackageUser { get; set; } = default!;
+        //add the DbSet, mapping the model to the database, they are virtual because im using them for moq test
+        public virtual DbSet<Package> Package { get; set; } = default!;
+        public virtual DbSet<Plane> Plane { get; set; } = default!;
+        public virtual DbSet<Hotels> Hotels { get; set; } = default!;
+        public virtual DbSet<ReturnPlane> ReturnPlane { get; set; } = default!;
+        public virtual DbSet<User> User { get; set; } = default!;
+        public virtual DbSet<PackageUser> PackageUser { get; set; } = default!;
     }
 }

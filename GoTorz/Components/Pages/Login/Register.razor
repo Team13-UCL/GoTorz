@@ -4,6 +4,7 @@
 @using GoTorz.Data
 @using GoTorz.Model
 @using GoTorz.Services
+@using static GoTorz.Components.Pages.Login.Login
 
 @*Makes the component accessible at /Register*@
 @page "/Register"
@@ -66,13 +67,15 @@
 
     public async void RegisterUser()
     {
+        string hashedPassword = PasswordHelper.HashPassword(Input.Password);
+
         bool result = userService.SaveUser(
             new User
             {
                 Name = Input.Name,
                 PhoneNumber = Input.PhoneNumber,
                 Email = Input.Email,
-                Password = Input.Password,
+                    Password = hashedPassword,
                 Role = "Customer"
             }
         );

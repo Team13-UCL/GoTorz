@@ -67,7 +67,20 @@ builder.Services.AddSingleton<AmadeusAuthService>(sp => {
 });
 builder.Services.AddScoped<HotelService>();
 
-// QuickGrid
+builder.Services.AddAuthentication();
+
+builder.Services.AddScoped<AmadeusAuthService>();
+builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
+
+// Konfigurer Serilog
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()  // Logger til konsollen
+    .WriteTo.File("Logs/log.txt", rollingInterval: RollingInterval.Day) // Logger til en fil pr. dag
+    .CreateLogger();
+
+// Tilføj Serilog som Logger
+builder.Host.UseSerilog();
+
 builder.Services.AddQuickGridEntityFrameworkAdapter();
 
 // Database Developer Page (kun for Development)
