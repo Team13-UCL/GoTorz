@@ -1,7 +1,9 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
+@using GoTorz.Components.Shared
 @inherits LayoutComponentBase
 @inject AuthenticationStateProvider auth
+
 
 
 <div class="page">
@@ -23,6 +25,8 @@
         </article>
     </main>
 </div>
+
+<GlobalChatWidget />
 
 <div id="blazor-error-ui">
     An unhandled error has occurred.

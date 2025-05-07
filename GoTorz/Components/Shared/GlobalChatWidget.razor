@@ -1,0 +1,186 @@
+﻿@* GoTorz/Components/Shared/GlobalChatWidget.razor (ULTRA-SIMPLIFIED - Reverting to @bind) *@
+@using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+
+@inject NavigationManager NavManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+@implements IAsyncDisposable
+
+@if (clientIsAuthenticated)
+{
+    <div style="position: fixed; bottom: 0; left: 0; width: 100%; background-color: #e9ecef; border-top: 2px solid #007bff; padding: 15px; z-index: 1000; box-shadow: 0 -3px 8px rgba(0,0,0,0.1);">
+
+        <div style="font-size: 1.1em; font-weight: bold; margin-bottom: 8px;">Ultra Simple Chat (@clientUserName) - Connection: @connectionStateForDisplay</div>
+        <div>Button Disabled Because: hubConnection is null? @(hubConnection == null) | State not Connected? @(hubConnection?.State != HubConnectionState.Connected) | MessageInput empty? @(string.IsNullOrWhiteSpace(messageInput))</div>
+        <div>Current C# messageInput value: "@messageInput"</div>
+
+
+        <div id="ultraSimpleChatMessages" style="height: 120px; overflow-y: scroll; border: 1px solid #ced4da; background-color: #fff; padding: 8px; margin-bottom: 8px;">
+            @foreach (var msg in messages)
+            {
+                <div style="margin-bottom: 4px;">
+                    <strong style="color: @(msg.User == clientUserName ? "#007bff" : "#28a745");">@msg.User:</strong> @msg.Message
+                </div>
+            }
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+            @* --- MODIFIED LINE BELOW --- *@
+            <input @bind="messageInput" @bind:event="oninput" placeholder="Message..." style="flex-grow: 1; padding: 5px;"
+                   disabled="@(hubConnection == null || hubConnection.State != HubConnectionState.Connected)" />
+            <button @onclick="TrySendMessageAsync" style="padding: 5px 10px;"
+                    disabled="@IsSendButtonDisabled()">
+                Send
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    private HubConnection? hubConnection;
+    private List<ChatMessageDto> messages = new List<ChatMessageDto>();
+    private string? messageInput; // This will be bound by @bind
+
+    private bool clientIsAuthenticated = false;
+    private string? clientUserName;
+    private string connectionStateForDisplay = "Not Connected";
+
+    // REMOVED UpdateMessageInput method - @bind will handle it.
+
+    private bool IsSendButtonDisabled()
+    {
+        bool isDisabled = hubConnection == null ||
+                          hubConnection.State != HubConnectionState.Connected ||
+                          string.IsNullOrWhiteSpace(messageInput); // This check remains the same
+        // Console.WriteLine($"UltraSimpleWidget: IsSendButtonDisabled evaluated. Result: {isDisabled}. MsgInput: '{messageInput}'"); // Add log here if needed
+        return isDisabled;
+    }
+
+    // --- The rest of your @code block (OnInitializedAsync, HandleAuthStateChanged, etc.) remains THE SAME ---
+    // --- as the previous version where we added StateHasChanged() to UpdateMessageInput ---
+    // --- Just make sure the `UpdateMessageInput` method is now GONE. ---
+
+    // PASTE THE REST OF THE PREVIOUS @CODE BLOCK HERE (excluding UpdateMessageInput):
+    // OnInitializedAsync
+    // HandleAuthStateChanged
+    // ProcessAuthState
+    // ConnectToHubAsync
+    // DisconnectFromHubAsync
+    // TrySendMessageAsync
+    // ChatMessageDto class
+    // DisposeAsync
+
+    // --- For clarity, here are the unchanged methods that should be part of the @code block ---
+    protected override async Task OnInitializedAsync()
+    {
+        Console.WriteLine("UltraSimpleWidget: OnInitializedAsync START");
+        AuthStateProvider.AuthenticationStateChanged += HandleAuthStateChanged;
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        ProcessAuthState(authState);
+        if (clientIsAuthenticated) await ConnectToHubAsync();
+        Console.WriteLine("UltraSimpleWidget: OnInitializedAsync END");
+    }
+
+    private async void HandleAuthStateChanged(Task<AuthenticationState> authStateTask)
+    {
+        Console.WriteLine("UltraSimpleWidget: AuthStateChanged START");
+        var authState = await authStateTask;
+        bool wasAuthenticated = clientIsAuthenticated;
+        ProcessAuthState(authState);
+        if (clientIsAuthenticated && !wasAuthenticated) await ConnectToHubAsync();
+        else if (!clientIsAuthenticated && wasAuthenticated) { await DisconnectFromHubAsync(); messages.Clear(); }
+        await InvokeAsync(StateHasChanged);
+        Console.WriteLine("UltraSimpleWidget: AuthStateChanged END");
+    }
+
+    private void ProcessAuthState(AuthenticationState authState)
+    {
+        var user = authState.User;
+        clientIsAuthenticated = user?.Identity?.IsAuthenticated ?? false;
+        clientUserName = clientIsAuthenticated ? (user.FindFirst(ClaimTypes.Name)?.Value ?? "ClientUser") : "Guest";
+        Console.WriteLine($"UltraSimpleWidget: ProcessAuthState - ClientIsAuth: {clientIsAuthenticated}, User: {clientUserName}");
+    }
+
+    private async Task ConnectToHubAsync()
+    {
+        if (!clientIsAuthenticated) return;
+        if (hubConnection is not null && hubConnection.State != HubConnectionState.Disconnected) return;
+        Console.WriteLine("UltraSimpleWidget: ConnectToHubAsync - Attempting connection.");
+        connectionStateForDisplay = "Connecting...";
+        await InvokeAsync(StateHasChanged);
+        hubConnection = new HubConnectionBuilder().WithUrl(NavManager.ToAbsoluteUri("/chathub")).Build();
+        Console.WriteLine($"UltraSimpleWidget: HubConnection object CREATED. Is it null? {hubConnection == null}");
+        hubConnection.On<string, string, DateTime>("ReceiveMessage", (user, message, timestamp) =>
+        {
+            messages.Add(new ChatMessageDto { User = user, Message = message });
+            Console.WriteLine($"UltraSimpleWidget: Message Received - User: {user}, Msg: {message}");
+            InvokeAsync(StateHasChanged);
+        });
+        hubConnection.Closed += (error) =>
+        {
+            connectionStateForDisplay = $"Closed ({error?.Message})";
+            Console.WriteLine($"UltraSimpleWidget: Connection Closed. Hub State: {hubConnection?.State}, Error: {error?.Message}");
+            InvokeAsync(StateHasChanged); return Task.CompletedTask;
+        };
+        try
+        {
+            await hubConnection.StartAsync();
+            connectionStateForDisplay = "Connected";
+            Console.WriteLine($"UltraSimpleWidget: Hub Connection STARTED. State: {hubConnection?.State}");
+        }
+        catch (Exception ex)
+        {
+            connectionStateForDisplay = $"Failed: {ex.Message.Substring(0, Math.Min(ex.Message.Length, 30))}";
+            Console.WriteLine($"UltraSimpleWidget: Hub Connection START FAILED: {ex.ToString()}");
+            hubConnection = null;
+        }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task DisconnectFromHubAsync()
+    {
+        if (hubConnection is not null)
+        {
+            Console.WriteLine("UltraSimpleWidget: Disconnecting from hub.");
+            var oldHub = hubConnection;
+            hubConnection = null;
+            connectionStateForDisplay = "Disconnected";
+            await InvokeAsync(StateHasChanged);
+            await oldHub.DisposeAsync();
+        }
+    }
+
+    private async Task TrySendMessageAsync()
+    {
+        Console.WriteLine($"UltraSimpleWidget: TrySendMessageAsync called. Hub State: {hubConnection?.State}, Message: '{messageInput}'");
+        if (IsSendButtonDisabled())
+        {
+            Console.WriteLine($"UltraSimpleWidget: Send button is disabled, send aborted. Conditions were: HubNull: {hubConnection == null}, HubState: {hubConnection?.State}, MsgInputEmpty: {string.IsNullOrWhiteSpace(messageInput)}");
+            return;
+        }
+        try
+        {
+            await hubConnection.SendAsync("SendMessage", messageInput);
+            Console.WriteLine($"UltraSimpleWidget: Message '{messageInput}' SENT to hub.");
+            messageInput = string.Empty; // This should trigger a re-render via @bind
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"UltraSimpleWidget: SendMessage FAILED: {ex.ToString()}");
+            messages.Add(new ChatMessageDto { User = "System", Message = $"Send Error: {ex.Message.Substring(0, Math.Min(ex.Message.Length, 40))}" });
+            await InvokeAsync(StateHasChanged); // Ensure error message is shown
+        }
+        // No explicit StateHasChanged() here, @bind should handle UI update for messageInput clearing
+    }
+
+    public class ChatMessageDto { public string User { get; set; } = ""; public string Message { get; set; } = ""; }
+
+    public async ValueTask DisposeAsync()
+    {
+        Console.WriteLine("UltraSimpleWidget: DisposeAsync CALLED");
+        AuthStateProvider.AuthenticationStateChanged -= HandleAuthStateChanged;
+        await DisconnectFromHubAsync();
+    }
+}

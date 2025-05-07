@@ -13,7 +13,7 @@ namespace GoTorz.Components.Middleware //THE TOOOOOOOOOOOOOOOOOOOOOOOOOOOBE OF W
         // Logins are thread-safe disctonary which stores users authentication details the key is Guid and value is ClaimsPrincipal (Whicvh stores the user's identity hopefully
         public static IDictionary<Guid, ClaimsPrincipal> Logins { get; private set; } = new ConcurrentDictionary<Guid, ClaimsPrincipal>();
 
-        // Middleware is a pipeline structure where ''next'' represents the next middleware in the pipeline, ''next'' is required to ensure the continuation of the pipeline if login is not required
+        // middleware is a pipeline structure where ''next'' represents the next middleware in the pipeline, ''next'' is required to ensure the continuation of the pipeline if login is not required
         public AuthMiddleware(RequestDelegate next)
         {
             this.next = next ?? throw new ArgumentNullException(nameof(next));

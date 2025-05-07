@@ -61,6 +61,7 @@
 
         var claims = new List<Claim>
         {
+            new Claim(ClaimTypes.Name, user.Name),
             new Claim(ClaimTypes.Name, user.Email),
             new Claim(ClaimTypes.Role, user.Role),
             new Claim(ClaimTypes.NameIdentifier, user.UserID.ToString()), // BRUG UserID HER
