@@ -129,7 +129,30 @@ else
                     <div class="card-body">
                         <p><strong><i class="fas fa-calendar-alt"></i> Dates:</strong> @CheckInDate?.ToString("yyyy-MM-dd") to @CheckOutDate?.ToString("yyyy-MM-dd")</p>
                         <p><strong><i class="fas fa-bed"></i> Room Options:</strong></p>
+                        
+                        
+<div class="form-group mt-3">
+    <label><i class="fas fa-image"></i> Hotel Image URL:</label>
+    <input @bind="HotelImageUrl" 
+           placeholder="https://example.com/hotel-image.jpg" 
+           class="form-control" />
+    <small class="form-text text-muted">
+        Indtast URL'en til et billede af hotellet
+    </small>
+</div>
 
+@if (!string.IsNullOrEmpty(HotelImageUrl))
+{
+    <div class="mt-3">
+        <label>Billede forhåndsvisning:</label>
+        <div class="mt-2">
+            <img src="@HotelImageUrl" 
+                 alt="Hotel billede" 
+                 style="max-width: 100%; height: auto; max-height: 200px;" 
+                 onerror="this.style.display='none'" />
+        </div>
+    </div>
+}              
                         <div class="table-responsive">
                             <table class="table table-hover mt-3 shadow-sm">
                                 <thead class="table-dark">
@@ -197,6 +220,7 @@ else
     private string AccessToken = "";
     private HotelOfferData SelectedHotel = null;
     private Offer SelectedOffer = null;
+    private string HotelImageUrl { get; set; } = string.Empty;
 
     [Parameter]
     [SupplyParameterFromQuery]
@@ -306,6 +330,7 @@ else
     {
         SelectedHotel = hotel;
         SelectedOffer = null;
+       
     }
 
     private void SelectRoom(Offer offer, string name, string price)
@@ -349,6 +374,7 @@ else
                 {
                     Name = name,
                     Price = price,
+                    ImageUrl= HotelImageUrl, //ImageUrl for billede 
                     CheckInDate = DateOnly.FromDateTime(checkInDate),
                     CheckOutDate = DateOnly.FromDateTime(checkOutDate)
                 };
