@@ -1,174 +1,286 @@
-﻿@* GoTorz/Components/Shared/GlobalChatWidget.razor (Connected - Send Button ALWAYS ENABLED TEST) *@
+﻿@page "/chat"
 @using Microsoft.AspNetCore.SignalR.Client
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Threading
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Security.Claims
-
-@inject NavigationManager NavManager
+@using GoTorz.Model
+@implements IAsyncDisposable
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
 @inject AuthenticationStateProvider AuthStateProvider
 
-@implements IAsyncDisposable
-
-@if (clientIsAuthenticated)
-{
-    <div style="position: fixed; bottom: 0; left: 0; width: 100%; background-color: #e9ecef; border-top: 2px solid #007bff; padding: 15px; z-index: 1000; box-shadow: 0 -3px 8px rgba(0,0,0,0.1);">
-
-        <div style="font-size: 1.1em; font-weight: bold; margin-bottom: 8px;">Ultra Simple Chat (@clientUserName) - Connection: @connectionStateForDisplay</div>
-        <div>Button Disabled Because: hubConnection is null? @(hubConnection == null) | State not Connected? @(hubConnection?.State != HubConnectionState.Connected) | MessageInput empty? @(string.IsNullOrWhiteSpace(messageInput))</div>
-        <div>Current C# messageInput value: "@messageInput"</div>
-
-
-        <div id="ultraSimpleChatMessages" style="height: 120px; overflow-y: scroll; border: 1px solid #ced4da; background-color: #fff; padding: 8px; margin-bottom: 8px;">
-            @foreach (var msg in messages)
-            {
-                <div style="margin-bottom: 4px;">
-                    <strong style="color: @(msg.User == clientUserName ? "#007bff" : "#28a745");">@msg.User:</strong> @msg.Message
-                </div>
-            }
-        </div>
-
-        <div style="display: flex; gap: 8px;">
-            <input @bind="messageInput" @bind:event="oninput" placeholder="Message..." style="flex-grow: 1; padding: 5px;"
-                   disabled="@(hubConnection == null || hubConnection.State != HubConnectionState.Connected)" />
-
-            <button @onclick="TrySendMessageAsync" style="padding: 5px 10px;" disabled="false">
-                @* Button is always enabled in UI *@
-                Send (Always Enabled)
-            </button>
-        </div>
+<div class="chat-container">
+    <div class="chat-header">
+        <h3>Global Chat</h3>
     </div>
-}
+
+    <div class="chat-messages" id="messagesList">
+        @foreach (var msg in messages)
+        {
+            <div class="message-item @(msg.IsCurrentUser ? "message-mine" : "message-other")">
+                <div class="message-info">
+                    <span class="message-user">@msg.User</span>
+                    <span class="message-time">@msg.Timestamp.ToLocalTime().ToString("HH:mm")</span>
+                </div>
+                <div class="message-content">@msg.Text</div>
+            </div>
+        }
+    </div>
+
+    <div class="chat-input">
+        <input @bind="messageInput"
+               @bind:event="oninput"
+               @onkeydown="HandleKeyDown"
+               placeholder="Type a message..."
+               disabled="@(!IsConnected)" />
+        <button @onclick="SendMessage" disabled="@(!IsConnected || string.IsNullOrWhiteSpace(messageInput))">
+            Send
+        </button>
+    </div>
+
+    <div class="connection-status @(IsConnected ? "connected" : "disconnected")">
+        @if (IsConnected)
+        {
+            <span>Connected</span>
+        }
+        else
+        {
+            <span>Disconnected</span>
+            <button @onclick="ConnectAsync">Reconnect</button>
+        }
+    </div>
+</div>
 
 @code {
     private HubConnection? hubConnection;
-    private List<ChatMessageDto> messages = new List<ChatMessageDto>();
-    private string? messageInput;
-
-    private bool clientIsAuthenticated = false;
-    private string? clientUserName;
-    private string connectionStateForDisplay = "Not Connected";
-
-    private bool IsSendButtonDisabled() // This method is effectively bypassed by disabled="false" on the button
-    {
-        return false;
-    }
+    private List<ChatMessage> messages = new List<ChatMessage>();
+    private string messageInput = string.Empty;
+    private string currentUser = string.Empty;
+    private bool isScrolledToBottom = true;
 
     protected override async Task OnInitializedAsync()
     {
-        Console.WriteLine("UltraSimpleWidget: OnInitializedAsync START");
-        AuthStateProvider.AuthenticationStateChanged += HandleAuthStateChanged;
+        // Hent brugerens navn fra authentication state
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        ProcessAuthState(authState);
-        if (clientIsAuthenticated) await ConnectToHubAsync();
-        Console.WriteLine("UltraSimpleWidget: OnInitializedAsync END");
-    }
-
-    private async void HandleAuthStateChanged(Task<AuthenticationState> authStateTask)
-    {
-        Console.WriteLine("UltraSimpleWidget: AuthStateChanged START");
-        var authState = await authStateTask;
-        bool wasAuthenticated = clientIsAuthenticated;
-        ProcessAuthState(authState);
-        if (clientIsAuthenticated && !wasAuthenticated) await ConnectToHubAsync();
-        else if (!clientIsAuthenticated && wasAuthenticated) { await DisconnectFromHubAsync(); messages.Clear(); }
-        await InvokeAsync(StateHasChanged);
-        Console.WriteLine("UltraSimpleWidget: AuthStateChanged END");
-    }
-
-    private void ProcessAuthState(AuthenticationState authState)
-    {
         var user = authState.User;
-        clientIsAuthenticated = user?.Identity?.IsAuthenticated ?? false;
-        clientUserName = clientIsAuthenticated ? (user.FindFirst(ClaimTypes.Name)?.Value ?? "ClientUser") : "Guest";
-        Console.WriteLine($"UltraSimpleWidget: ProcessAuthState - ClientIsAuth: {clientIsAuthenticated}, User: {clientUserName}");
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            // Prøv at finde brugerens navn fra claims
+            var nameClaim = user.FindFirst("name") ?? user.FindFirst(System.Security.Claims.ClaimTypes.Name);
+            if (nameClaim != null)
+            {
+                currentUser = nameClaim.Value;
+            }
+            else
+            {
+                // Hvis vi ikke kan finde et navn, brug email eller andet ID
+                currentUser = user.Identity.Name ?? "Authenticated_User";
+            }
+        }
+
+        // Hvis der stadig ikke er et navn, så brug Guest som fallback
+        if (string.IsNullOrEmpty(currentUser))
+        {
+            currentUser = "Guest_" + Guid.NewGuid().ToString().Substring(0, 4);
+        }
+
+        await ConnectAsync();
     }
 
-    private async Task ConnectToHubAsync()
+    private async Task ConnectAsync()
     {
-        if (!clientIsAuthenticated) return;
-        if (hubConnection is not null && hubConnection.State != HubConnectionState.Disconnected) return;
-        Console.WriteLine("UltraSimpleWidget: ConnectToHubAsync - Attempting connection.");
-        connectionStateForDisplay = "Connecting...";
-        await InvokeAsync(StateHasChanged);
-        hubConnection = new HubConnectionBuilder().WithUrl(NavManager.ToAbsoluteUri("/chathub")).Build();
-        Console.WriteLine($"UltraSimpleWidget: HubConnection object CREATED. Is it null? {hubConnection == null}");
-        hubConnection.On<string, string, DateTime>("ReceiveMessage", (user, message, timestamp) =>
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/chathub"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        hubConnection.On<string, string, DateTime>("ReceiveMessage", async (user, message, timestamp) =>
         {
-            messages.Add(new ChatMessageDto { User = user, Message = message });
-            Console.WriteLine($"UltraSimpleWidget: Message Received - User: {user}, Msg: {message}");
-            InvokeAsync(StateHasChanged);
+            var isCurrentUser = user == currentUser;
+            messages.Add(new ChatMessage { User = user, Text = message, Timestamp = timestamp, IsCurrentUser = isCurrentUser });
+
+            // Brug InvokeAsync for at sikre UI-opdateringer sker på UI tråden
+            await InvokeAsync(() =>
+            {
+                StateHasChanged();
+                ScrollToBottom();
+            });
         });
-        hubConnection.Closed += (error) =>
-        {
-            connectionStateForDisplay = $"Closed ({error?.Message})";
-            Console.WriteLine($"UltraSimpleWidget: Connection Closed. Hub State: {hubConnection?.State}, Error: {error?.Message}");
-            InvokeAsync(StateHasChanged); return Task.CompletedTask;
-        };
+
         try
         {
             await hubConnection.StartAsync();
-            connectionStateForDisplay = "Connected";
-            Console.WriteLine($"UltraSimpleWidget: Hub Connection STARTED. State: {hubConnection?.State}");
+            Console.WriteLine($"Connected to chat hub as: {currentUser}");
         }
         catch (Exception ex)
         {
-            connectionStateForDisplay = $"Failed: {ex.Message.Substring(0, Math.Min(ex.Message.Length, 30))}";
-            Console.WriteLine($"UltraSimpleWidget: Hub Connection START FAILED: {ex.ToString()}");
-            hubConnection = null;
+            Console.WriteLine($"Error connecting to hub: {ex.Message}");
         }
-        await InvokeAsync(StateHasChanged);
     }
 
-    private async Task DisconnectFromHubAsync()
+    private async Task SendMessage()
     {
-        if (hubConnection is not null)
+        if (hubConnection is not null && IsConnected && !string.IsNullOrWhiteSpace(messageInput))
         {
-            Console.WriteLine("UltraSimpleWidget: Disconnecting from hub.");
-            var oldHub = hubConnection;
-            hubConnection = null;
-            connectionStateForDisplay = "Disconnected";
-            await InvokeAsync(StateHasChanged);
-            await oldHub.DisposeAsync();
+            try
+            {
+                // Send det aktuelle brugernavn sammen med beskeden
+                await hubConnection.SendAsync("SendMessage", messageInput, currentUser);
+                messageInput = string.Empty;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending message: {ex.Message}");
+            }
         }
     }
 
-    private async Task TrySendMessageAsync()
+    private async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        Console.WriteLine($"UltraSimpleWidget: TrySendMessageAsync called. Hub State: {hubConnection?.State}, C# messageInput: '{messageInput}'"); // Log C# field
-
-        // Internal guards within the method are still active and important
-        if (hubConnection == null || hubConnection.State != HubConnectionState.Connected)
+        if (e.Key == "Enter")
         {
-            Console.WriteLine($"UltraSimpleWidget: Send aborted by internal guard. Hub not connected. Current State: {hubConnection?.State}");
-            return;
+            await SendMessage();
         }
-        // This check will use the C# messageInput field's value
-        if (string.IsNullOrWhiteSpace(messageInput))
-        {
-            Console.WriteLine($"UltraSimpleWidget: Send aborted by internal guard. C# messageInput is empty or whitespace ('{messageInput}').");
-            return;
-        }
-
-        try
-        {
-            // It will send the current value of the C# messageInput field
-            await hubConnection.SendAsync("SendMessage", messageInput);
-            Console.WriteLine($"UltraSimpleWidget: Message '{messageInput}' SENT to hub.");
-            messageInput = string.Empty; // Clear the C# field
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"UltraSimpleWidget: SendMessage FAILED: {ex.ToString()}");
-            messages.Add(new ChatMessageDto { User = "System", Message = $"Send Error: {ex.Message.Substring(0, Math.Min(ex.Message.Length, 40))}" });
-        }
-        await InvokeAsync(StateHasChanged); // To update UI (clear input, show error, show sent message if it echoes back)
     }
 
-    public class ChatMessageDto { public string User { get; set; } = ""; public string Message { get; set; } = ""; }
+    private async Task ScrollToBottom()
+    {
+        if (isScrolledToBottom)
+        {
+            await Task.Delay(50); // Give time for the UI to update
+            await JSRuntime.InvokeVoidAsync("scrollToBottom", "messagesList");
+        }
+    }
+
+    public bool IsConnected => hubConnection?.State == HubConnectionState.Connected;
 
     public async ValueTask DisposeAsync()
     {
-        Console.WriteLine("UltraSimpleWidget: DisposeAsync CALLED");
-        AuthStateProvider.AuthenticationStateChanged -= HandleAuthStateChanged;
-        await DisconnectFromHubAsync();
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+
+    private class ChatMessage
+    {
+        public string User { get; set; } = string.Empty;
+        public string Text { get; set; } = string.Empty;
+        public DateTime Timestamp { get; set; }
+        public bool IsCurrentUser { get; set; }
     }
 }
+
+<style>
+    .chat-container {
+        display: flex;
+        flex-direction: column;
+        height: 500px;
+        max-width: 800px;
+        margin: 0 auto;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        overflow: hidden;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .chat-header {
+        background-color: #0d6efd;
+        color: white;
+        padding: 10px;
+        text-align: center;
+    }
+
+    .chat-messages {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        background-color: #f9f9f9;
+    }
+
+    .message-item {
+        max-width: 80%;
+        padding: 8px 12px;
+        border-radius: 8px;
+        margin-bottom: 5px;
+    }
+
+    .message-mine {
+        align-self: flex-end;
+        background-color: #d1e7ff;
+    }
+
+    .message-other {
+        align-self: flex-start;
+        background-color: #e9e9e9;
+    }
+
+    .message-info {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2px;
+        font-size: 0.8rem;
+    }
+
+    .message-user {
+        font-weight: bold;
+    }
+
+    .message-time {
+        color: #666;
+    }
+
+    .message-content {
+        word-break: break-word;
+    }
+
+    .chat-input {
+        display: flex;
+        padding: 10px;
+        background-color: white;
+        border-top: 1px solid #ddd;
+    }
+
+        .chat-input input {
+            flex-grow: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+
+        .chat-input button {
+            padding: 8px 15px;
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+            .chat-input button:disabled {
+                background-color: #cccccc;
+                cursor: not-allowed;
+            }
+
+    .connection-status {
+        padding: 5px 10px;
+        text-align: center;
+        font-size: 0.8rem;
+    }
+
+    .connected {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .disconnected {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+</style>

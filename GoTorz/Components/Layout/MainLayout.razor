@@ -26,7 +26,11 @@
     </main>
 </div>
 
-<GlobalChatWidget />
+<div class="global-chat-widget-container">
+    @* Wrap it if you need to style its position *@
+    <GlobalChatWidget @rendermode="new InteractiveServerRenderMode(prerender: true)" />
+    @* Eller <Chat @rendermode="new InteractiveServerRenderMode(prerender: true)" /> *@
+</div>
 
 <div id="blazor-error-ui">
     An unhandled error has occurred.
