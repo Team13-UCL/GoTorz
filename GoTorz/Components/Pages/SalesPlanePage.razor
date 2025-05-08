@@ -7,7 +7,7 @@
 @using GoTorz.Model
 @using Microsoft.AspNetCore.Authorization
 @attribute [StreamRendering]
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize(Roles = "Admin,Sales")]
 @rendermode InteractiveServer
 @inject NavigationManager Navigation
 @inject GoTorz.Data.GoTorzContext DbContext
