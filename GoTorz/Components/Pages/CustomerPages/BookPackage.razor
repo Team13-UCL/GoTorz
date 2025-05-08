@@ -126,24 +126,24 @@
 @code {
     [Parameter]
     public int PlaneId { get; set; }
-    
+
     [Parameter]
     public int HotelId { get; set; }
-    
+
     [Parameter]
     public int ReturnPlaneId { get; set; }
-    
+
     private Package CurrentPackage { get; set; }
     private bool IsLoading { get; set; } = true;
     private string ErrorMessage { get; set; } = "";
     private bool BookingComplete { get; set; } = false;
     private string BookingReference { get; set; } = "";
-    
+
     // Guest information
     private string GuestName { get; set; } = "";
     private string GuestEmail { get; set; } = "";
-    
-    //OnItializedAsync kaldes for at hente valgte pakke og dens detaljer
+
+    // Called when the component is initialized to load package details
     protected override async Task OnInitializedAsync()
     {
         try
@@ -152,67 +152,76 @@
         }
         catch (Exception ex)
         {
+            // Set error message if an exception occurs
             ErrorMessage = $"Error loading page: {ex.Message}";
         }
         finally
         {
+            // Ensure loading spinner is hidden
             IsLoading = false;
         }
     }
-    
+
+    // Load package details from the database
     private async Task LoadPackageDetails()
     {
         try
         {
-            // Get the package by its components
+            // Fetch the package based on the provided IDs
             CurrentPackage = await DbContext.Package
                 .Include(p => p.Hotels)
                 .Include(p => p.Plane)
                 .Include(p => p.ReturnPlane)
-                .FirstOrDefaultAsync(p => 
-                    p.PlaneId == PlaneId && 
-                    p.HotelId == HotelId && 
+                .FirstOrDefaultAsync(p =>
+                    p.PlaneId == PlaneId &&
+                    p.HotelId == HotelId &&
                     p.ReturnPlaneID == ReturnPlaneId);
-                
+
             if (CurrentPackage == null)
             {
+                // Set error message if no package is found
                 ErrorMessage = "The selected travel package could not be found.";
             }
         }
         catch (Exception ex)
         {
+            // Handle database errors
             ErrorMessage = $"Error loading package: {ex.Message}";
         }
     }
-    
- 
-    
+
+    // Confirm the booking for the current package
     private async Task ConfirmBooking()
     {
         IsLoading = true;
 
         try
         {
+            // Get the current user's authentication state
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
 
+            // Ensure the user is logged in
             if (user.Identity == null || !user.Identity.IsAuthenticated)
             {
                 throw new Exception("You must be logged in to make a booking.");
             }
 
+            // Parse the user ID from the claims
             var userIdString = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(userIdString, out int userId))
             {
                 throw new Exception("Invalid user ID.");
             }
 
+            // Fetch the user from the database
             var bookingUser = await DbContext.User.FindAsync(userId);
             if (bookingUser == null)
             {
                 throw new Exception("User not found in database.");
             }
 
+            // Check if the package exists
             var package = await DbContext.Package
                 .FirstOrDefaultAsync(p =>
                     p.PlaneId == CurrentPackage.PlaneId &&
@@ -237,6 +246,7 @@
                 throw new Exception("This package has already been booked.");
             }
 
+            // Create a new booking record
             var packageUser = new PackageUser
                 {
                     PackagePlaneId = CurrentPackage.PlaneId,
@@ -247,20 +257,25 @@
                     Status = "Confirmed"
                 };
 
+            // Save the booking to the database
             DbContext.PackageUser.Add(packageUser);
             await DbContext.SaveChangesAsync();
 
+            // Generate a booking reference
             BookingReference = $"GT-{DateTime.Now:yyMMdd}-{bookingUser.UserID}";
             BookingComplete = true;
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message; // Show user-friendly error
+            // Display a user-friendly error message
+            ErrorMessage = ex.Message;
         }
         finally
         {
+            // Ensure loading spinner is hidden
             IsLoading = false;
         }
     }
 }
+
 

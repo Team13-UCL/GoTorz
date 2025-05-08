@@ -135,6 +135,7 @@ else
 }
 
 @code {
+    // Fields to store flight search parameters and results
     private string Origin = "";
     private string Destination = "";
     private DateTime? DepartureDate = null;
@@ -143,31 +144,37 @@ else
     private bool IsLoading = false;
     private string AccessToken = "";
 
-    // Fetch the Access Token when the page loads
+    // Called automatically when the component is initialized
+    // Retrieves the access token for Amadeus API
     protected override async Task OnInitializedAsync()
     {
         AccessToken = await AmadeusService.GetAccessTokenAsync();
     }
 
+    // Fetches available flights based on search parameters
     private async Task FetchFlights()
     {
         IsLoading = true;
         ErrorMessage = "";
         FlightResults.Clear();
-        Logger.LogInformation("klikket");
+        Logger.LogInformation("klikket"); // Debug log
 
         try
         {
             if (DepartureDate.HasValue)
             {
                 string departureDateString = DepartureDate.Value.ToString("yyyy-MM-dd");
-                var response = await AmadeusService.SearchFlightsAsync(Origin, Destination, departureDateString);
-                Logger.LogInformation("JSON Response: {response}", response); // Log the JSON response
 
+                // Call to external service to search for flights
+                var response = await AmadeusService.SearchFlightsAsync(Origin, Destination, departureDateString);
+                Logger.LogInformation("JSON Response: {response}", response); // Log raw JSON response
+
+                // Parse and extract "data" section from JSON response
                 var jsonDocument = JsonDocument.Parse(response);
                 var flightData = jsonDocument.RootElement.GetProperty("data").GetRawText();
-                FlightResults = JsonSerializer.Deserialize<List<Flight>>(flightData);
 
+                // Deserialize JSON to list of Flight objects
+                FlightResults = JsonSerializer.Deserialize<List<Flight>>(flightData);
                 Logger.LogInformation("Flights fetched successfully.");
             }
             else
@@ -177,20 +184,22 @@ else
         }
         catch (Exception ex)
         {
+            // Handle and log any errors
             ErrorMessage = $"Error: {ex.Message}";
             Logger.LogError(ex, "Error fetching flights.");
         }
         finally
         {
-            IsLoading = false;
+            IsLoading = false; // Turn off loading state
         }
     }
 
+    // Saves selected flight details to the database
     private async Task SaveFlightDetails(string departure, string arrival, string carrier, decimal price, DateTime startDate)
     {
         try
         {
-            // Iterate through all segments to capture layovers
+            // Gather layover information from all flight segments
             var layovers = new List<string>();
             foreach (var flight in FlightResults)
             {
@@ -203,6 +212,7 @@ else
                 }
             }
 
+            // Create new Plane object and populate fields
             var plane = new Plane
                 {
                     DepartureAirport = departure,
@@ -212,12 +222,13 @@ else
                     StartDate = startDate
                 };
 
+            // Save the flight to the database
             DbContext.Plane.Add(plane);
             await DbContext.SaveChangesAsync();
 
             Logger.LogInformation("Flight details saved successfully with layovers: {Layovers}", string.Join(", ", layovers));
 
-            // Navigate to the return flight selection page
+            // Redirect user to the return flight selection page with flight details
             var departureEncoded = Uri.EscapeDataString(departure);
             var arrivalEncoded = Uri.EscapeDataString(arrival);
             var carrierEncoded = Uri.EscapeDataString(carrier);
@@ -232,13 +243,15 @@ else
         }
     }
 
+    // Called when the user selects a flight offer
     private void SelectPlaneOffer(string departure, string arrival, string carrier, string price)
     {
+        // Try to parse the price and proceed if valid
         if (decimal.TryParse(price, CultureInfo.InvariantCulture, out var parsedPrice))
         {
             if (DepartureDate.HasValue)
             {
-                // Save the details to the database first
+                // Save flight info if departure date is set
                 SaveFlightDetails(departure, arrival, carrier, parsedPrice, DepartureDate.Value);
             }
             else
@@ -252,3 +265,4 @@ else
         }
     }
 }
+

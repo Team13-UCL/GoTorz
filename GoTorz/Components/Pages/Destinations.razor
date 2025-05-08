@@ -214,22 +214,22 @@
 </div>
 
 @code {
+    // Search and Filter Properties
     private string SearchTerm { get; set; } = "";
     private DateTime? DepartureDate { get; set; } = DateTime.Now;
     private DateTime? ReturnDate { get; set; } = DateTime.Now.AddDays(14);
     private bool SortByPrice { get; set; } = false;
     private bool SortByDate { get; set; } = false;
+
+    // State Management
     private bool IsLoading { get; set; } = false;
     private bool HasSearched { get; set; } = false;
     private bool ShowLoginErrorModal { get; set; } = false;
     private string ErrorMessage { get; set; } = "";
-    public bool IsBooked { get; set; }
 
-    //Alle vores pakker fra vores database 
+    // Data Collections
     private List<Package> AllPackages { get; set; } = new();
     private List<Package> FilteredPackages { get; set; } = new();
-
-    // liste af samme destinationer som home-siden for at vise dem i en preview
     private List<Destination> PopularDestinations = new()
     {
         new Destination { Name = "Paris", ImageUrl = "https://cdn.pixabay.com/photo/2019/02/21/18/52/paris-4011964_1280.jpg", Price = 299 },
