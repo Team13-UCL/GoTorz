@@ -8,10 +8,10 @@ namespace GoTorz.Hubs
     // [Authorize] // <<< KEPT COMMENTED OUT
     public class ChatHub : Hub
     {
-        // Opdateret til at modtage både besked og brugernavn
-        public async Task SendMessage(string message, string userName = null)
+        // Updated to receive message, username and channel
+        public async Task SendMessage(string message, string userName = null, string channel = "Global Chat")
         {
-            // Hvis ikke brugernavn er angivet, prøv at få det fra Context
+            // If username is not provided, try to get it from Context
             if (string.IsNullOrEmpty(userName))
             {
                 userName = Context.User?.Identity?.IsAuthenticated == true ? Context.User.Identity.Name : "Guest_Hub";
@@ -25,12 +25,12 @@ namespace GoTorz.Hubs
             }
             var timestamp = DateTime.UtcNow; // Server adds timestamp
 
-            Console.WriteLine($"ChatHub: Broadcasting message from '{userName}': '{message}' with timestamp {timestamp}");
-            // Client i GlobalChatWidget.razor forventer user, message, timestamp
-            await Clients.All.SendAsync("ReceiveMessage", userName, message, timestamp);
+            Console.WriteLine($"ChatHub: Broadcasting message from '{userName}' in channel '{channel}': '{message}' with timestamp {timestamp}");
+            // Client in GlobalChatWidget.razor expects user, message, timestamp, channel
+            await Clients.All.SendAsync("ReceiveMessage", userName, message, timestamp, channel);
         }
 
-        // OnConnectedAsync og OnDisconnectedAsync forbliver uændret
+        // OnConnectedAsync and OnDisconnectedAsync remain unchanged
         public override Task OnConnectedAsync()
         {
             var userNameForLog = Context.User?.Identity?.IsAuthenticated == true ? Context.User.Identity.Name : "Anonymous";
