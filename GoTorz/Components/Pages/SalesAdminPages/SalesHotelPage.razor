@@ -210,14 +210,14 @@ else
 }
 
 @code {
-    private string CityCode = "";
+    private string CityCode = string.Empty;
     private DateTime? CheckInDate = DateTime.Today.AddDays(1);
     private DateTime? CheckOutDate = DateTime.Today.AddDays(3);
     private int Adults = 1;
     private List<HotelOfferData> HotelOffers = new();
-    private string ErrorMessage = "";
+    private string ErrorMessage = string.Empty;
     private bool IsLoading = false;
-    private string AccessToken = "";
+    private string AccessToken = string.Empty;
     private HotelOfferData SelectedHotel = null;
     private Offer SelectedOffer = null;
     private string HotelImageUrl { get; set; } = string.Empty;
@@ -244,6 +244,7 @@ else
         AccessToken = await AmadeusService.GetAccessTokenAsync();
     }
 
+	// Method to fetch hotels and their pricing
     private async Task FetchHotelsWithPricing()
     {
         if (string.IsNullOrWhiteSpace(CityCode))
