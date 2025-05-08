@@ -2,6 +2,8 @@
 @inject GoTorz.Data.GoTorzContext DbContext
 @inject ILogger<PackageHistory> Logger
 @inject NavigationManager Navigation
+@attribute [Authorize(Roles = "Customer")]
+@using Microsoft.AspNetCore.Authorization
 @using GoTorz.Model
 @using Microsoft.EntityFrameworkCore
 @rendermode InteractiveServer

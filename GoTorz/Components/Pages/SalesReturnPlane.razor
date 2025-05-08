@@ -3,9 +3,11 @@
 @inject GoTorz.Data.GoTorzContext DbContext
 @inject ILogger<SalesReturnPlane> Logger
 @inject AmadeusAuthService AmadeusService
+@attribute [Authorize(Roles = "Admin,Sales")]
 @using System.Text.Json.Serialization
 @using System.Text.Json
 @using GoTorz.Model
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components
 @rendermode InteractiveServer
 @using System.Globalization
