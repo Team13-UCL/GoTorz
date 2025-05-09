@@ -11,18 +11,47 @@
    
 
 
-<div class="container my-5">
-       <img src="https://gotorz.ae/assets/img/logo-medium.png" alt="Gotorz logo" style="max-width: 200px;" class="d-block mx-auto mb-4" />
-    
-       <h1 class="text-center text-black mb-4">Find Your Dream Destination</h1>
+<style>
+    body {
+        margin: 0;
+        background: linear-gradient(to bottom, #0F52BA 40%, #ffffff 99%);
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }
 
-<!--Søgefeltet-->
-    <div class="card shadow-lg mb-5">
-        <div class="card-header bg-warning">
-            <h4 class="mb-0 text-dark"><i class="fas fa-search"></i> Search Destinations</h4>
+    .city-footer {
+        width: 100%;
+        height: 180px;
+        background: url() bottom center no-repeat;
+        background-size: cover;
+        margin-top: -40px;
+    }
+
+    .airplane-icon {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        width: 60px;
+        height: auto;
+        z-index: 10;
+    }
+</style>
+
+
+<div class="container py-5">
+    <img src="https://gotorz.ae/assets/img/logo-medium.png" alt="Gotorz logo"
+         style="max-width: 200px;" class="d-block mx-auto mb-4" />
+
+    <h1 class="text-center text-white mb-4">Find Your Dream Destination</h1>
+
+    <!-- Søgekort -->
+    <div class="card shadow-lg mb-5" style="border-radius: 1px;">
+        <div class="card-header" style="background-color: #FFA500;">
+            <h4 class="mb-0 text-shadow"><i class="fas fa-search"></i> Search Destinations</h4>
         </div>
-        <div class="card-body">
+        <div class="card-body bg-light rounded-bottom">
             <div class="row g-3">
+                <!-- Søgning -->
                 <div class="col-md-4">
                     <div class="form-floating">
                         <input type="text" class="form-control" id="destinationSearch" @bind="SearchTerm" @bind:event="oninput" @onkeyup="HandleSearch" placeholder="Where do you want to go?">
@@ -30,25 +59,20 @@
                     </div>
                 </div>
 
-                <!--søge input for departure date-->
                 <div class="col-md-3">
                     <div class="form-floating">
-                        <input type="date" class="form-control" id="departureDate" @bind="DepartureDate"
-                        min="@DateTime.Now.ToString("yyyy-MM-dd")">
+                        <input type="date" class="form-control" id="departureDate" @bind="DepartureDate">
                         <label for="departureDate">Departure Date</label>
                     </div>
                 </div>
 
-                <!--søge input for return date-->
                 <div class="col-md-3">
                     <div class="form-floating">
-                        <input type="date" class="form-control" id="returnDate" @bind="ReturnDate"
-                        min="@DateTime.Now.ToString("yyyy-MM-dd")">
+                        <input type="date" class="form-control" id="returnDate" @bind="ReturnDate">
                         <label for="returnDate">Return Date</label>
                     </div>
                 </div>
 
-                <!--søge knap-->
                 <div class="col-md-2">
                     <button class="btn btn-warning btn-lg w-100 h-100" @onclick="SearchDestinations">
                         <i class="fas fa-search"></i> Search
@@ -56,7 +80,6 @@
                 </div>
             </div>
 
-            <!--sorting options-->
             <div class="mt-3">
                 <div class="form-check form-check-inline">
                     <input class="form-check-input" type="checkbox" id="sortByPrice" @bind="SortByPrice">
@@ -69,16 +92,15 @@
             </div>
         </div>
     </div>
-   
+
+    @* Resultatvisning og kort *@
     @if (IsLoading)
     {
         <div class="text-center my-5">
-            <div class="spinner-border text-warning" role="status"></div>
-            <p>Finding the best travel options for you...</p>
+            <div class="spinner-border text-light" role="status"></div>
+            <p class="text-white">Finding the best travel options for you...</p>
         </div>
     }
-
-   
     else if (!string.IsNullOrEmpty(ErrorMessage))
     {
         <div class="alert alert-danger">
@@ -92,131 +114,78 @@
             <h5>No travel packages found</h5>
             <p>Try adjusting your search criteria or exploring our popular destinations below.</p>
         </div>
-
-    
     }
-
     else if (FilteredPackages.Count > 0)
     {
-        <h3 class="text-center mb-4">Available Travel Packages for "@SearchTerm"</h3>
-
+        <h3 class="text-center text-white mb-4">Available Travel Packages for "@SearchTerm"</h3>
         <div class="row">
-           @foreach (var package in FilteredPackages)
-{
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm h-100">
-            <!-- Hotel image moved inside the card -->
-            <div class="text-center">
-                <img src="@package.Hotels.ImageUrl" 
-     alt="Hotel image"
-     class="card-img-top" 
-     style="height: 200px; object-fit: cover;" />
-            </div>
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">@package.Plane.ArrivalAirport - @package.Hotels.Name</h5>
-            </div>
-            <div class="card-body">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <p><i class="fas fa-plane-departure"></i> <strong>From:</strong> @package.Plane.DepartureAirport</p>
-                        <p><i class="fas fa-calendar-alt"></i> <strong>Departure:</strong> @package.Plane.StartDate.ToString("dd/MM/yyyy")</p>
-                        <p><i class="fas fa-calendar-alt"></i> <strong>Return:</strong> @package.ReturnPlane.ReturnDate.ToString("dd/MM/yyyy")</p>
-                    </div>
-                    <div class="col-md-6">
-                        <p><i class="fas fa-hotel"></i> <strong>Hotel:</strong> @package.Hotels.Name</p>
-                        <p><i class="fas fa-clock"></i> <strong>Duration:</strong> @package.ReturnPlane.Duration days</p>
+            @foreach (var package in FilteredPackages)
+            {
+                <div class="col-md-6 mb-4">
+                    <div class="card shadow-sm h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">@package.Plane.ArrivalAirport - @package.Hotels.Name</h5>
+                        </div>
+                        <div class="card-body bg-light">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <p><i class="fas fa-plane-departure"></i> <strong>From:</strong> @package.Plane.DepartureAirport</p>
+                                    <p><i class="fas fa-calendar-alt"></i> <strong>Departure:</strong> @package.Plane.StartDate.ToString("dd/MM/yyyy")</p>
+                                    <p><i class="fas fa-calendar-alt"></i> <strong>Return:</strong> @package.ReturnPlane.ReturnDate.ToString("dd/MM/yyyy")</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p><i class="fas fa-hotel"></i> <strong>Hotel:</strong> @package.Hotels.Name</p>
+                                    <p><i class="fas fa-clock"></i> <strong>Duration:</strong> @package.ReturnPlane.Duration days</p>
+                                </div>
+                            </div>
+                            <hr />
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h4 class="text-success mb-0">@package.PackagePrice?.ToString("N2") €</h4>
+                                    <small class="text-muted">per person</small>
+                                </div>
+                                @if (package.IsBooked)
+                                {
+                                    <span class="badge bg-danger">Already Booked</span>
+                                }
+                                else
+                                {
+                                    <button class="btn btn-warning" @onclick="() => SelectPackage(package)">
+                                        <i class="fas fa-shopping-cart"></i> Book Now
+                                    </button>
+                                }
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <hr />
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h4 class="text-success mb-0">@package.PackagePrice?.ToString("N2") €</h4>
-                        <small class="text-muted">per person</small>
-                    </div>
-                    @if (package.IsBooked)
-                    {
-                        <span class="badge bg-danger">Already Booked</span>
-                    }
-                    else
-                    {
-                        <button class="btn btn-warning" @onclick="() => SelectPackage(package)">
-                            <i class="fas fa-shopping-cart"></i> Book Now
-                        </button>
-                    }
-                </div>
-            </div>
+            }
         </div>
-    </div>
-}
-</div  >
-	}
-    <!--Popular destinations preview-->
-    <h3 class="text-center text-warning mt-5 mb-4">Popular Destinations</h3>
+    }
+
+    <h3 class="text-center text-white mt-5 mb-4">Popular Destinations</h3>
     <div class="row">
         @foreach (var destination in PopularDestinations)
         {
             <div class="col-md-4 mb-4">
                 <div class="card shadow-sm h-100">
                     <img src="@destination.ImageUrl" class="card-img-top" alt="@destination.Name" style="height: 200px; object-fit: cover;">
-                    <div class="card-body text-center">
+                    <div class="card-body text-center bg-light">
                         <h5>@destination.Name</h5>
                         <p class="text-muted">Starting from @destination.Price.ToString("N2") €</p>
-                        <button class="btn btn-sm btn-outline-warning" @onclick="() => SetSearchTermAsync(destination.Name)">View Packages</button>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="() => SetSearchTermAsync(destination.Name)">View Packages</button>
                     </div>
                 </div>
             </div>
         }
     </div>
-    <div class="row justify-content-center mt-5">
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-body">
-                    <h3 class="text-center text-warning">Let's Start Adventures</h3>
-                    <div class="px-4">
-                        <p class="text-center">
-                            We at Gotorz give you, besides the travel experience, the pleasure of adventure and discovering new and enjoyable tourist destinations.
-                            Life is short and the world is very wide, the sooner you start to discover it, the better.
-                        </p>
-                        <p class="text-center">
-                            Gotorz has made achieving happiness and travel easy and convenient in addition to being cheap and accessible to everyone.
-                            Cheap prices with high services - this equation we succeeded in achieving, leaving a large imprint in the world of the travel industry.
-                        </p>
-                        <p class="text-center">
-                            Traveling is a culture that gives you experiences no book or library could provide. It's real, direct contact with life, beauty,
-                            and other cultures. Traveling creates awareness that seeps deep into your consciousness and makes you a storyteller.
-                            Seeing once is better than hearing a hundred times - so don't just hear about travel, go see for yourself.
-                        </p>
-
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    @if (ShowLoginErrorModal)
-    {
-        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title text-danger">Login Required</h5>
-                        <button type="button" class="btn-close" @onclick="CloseLoginErrorModal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>You must be logged in to confirm a booking. Please log in to continue.</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-primary" @onclick="RedirectToLogin">Go to Login</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
 </div>
+
+<div class="city-footer"></div>
 
 @code {
     private string SearchTerm { get; set; } = "";
-    private DateTime? DepartureDate { get; set; } = DateTime.Now;
-    private DateTime? ReturnDate { get; set; } = DateTime.Now.AddDays(14);
+    private DateTime? DepartureDate { get; set; } = DateTime.Now.AddDays(14);
+    private DateTime? ReturnDate { get; set; } = DateTime.Now.AddDays(21);
     private bool SortByPrice { get; set; } = false;
     private bool SortByDate { get; set; } = false;
     private bool IsLoading { get; set; } = false;
