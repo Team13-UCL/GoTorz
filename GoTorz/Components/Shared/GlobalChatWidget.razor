@@ -1,0 +1,620 @@
+﻿@page "/chat"
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Threading.Tasks
+@using System.Collections.Generic
+@using System.Linq <!-- Added for Sum() -->
+@using System.Threading
+@using Microsoft.AspNetCore.Components.Authorization
+@implements IAsyncDisposable
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject AuthenticationStateProvider AuthStateProvider
+
+<!-- Minimal chat button (when minimized) -->
+<div class="chat-button @(isMinimized ? "visible" : "hidden")" @onclick="ToggleMinimizedAsync">
+    <i class="chat-icon">💬</i>
+    @if (unreadMessageCount > 0)
+    {
+        <span class="notification-badge">@(unreadMessageCount > 9 ? "9+" : unreadMessageCount.ToString())</span>
+    }
+</div>
+
+<!-- Full chat container -->
+<div class="chat-container @(isMinimized ? "hidden" : "visible")">
+    <div class="chat-header">
+        <select @onchange="OnChannelSelected" class="channel-selector">
+            @foreach (var channelName in availableChannels)
+            {
+                <option value="@channelName" selected="@(channelName == currentChannel)">@channelName</option>
+            }
+        </select>
+        <span style="flex-grow: 1;"></span> <!-- Spacer -->
+        <div class="chat-controls">
+            <button class="minimize-button" @onclick="ToggleMinimizedAsync">_</button>
+        </div>
+    </div>
+
+    <div class="chat-messages" id="messagesList" @onscroll="HandleScroll">
+        @foreach (var msg in GetCurrentChannelMessages())
+        {
+            <div class="message-item @(msg.IsCurrentUser ? "message-mine" : "message-other")">
+                <div class="message-info">
+                    <span class="message-user">@msg.User</span>
+                    <span class="message-time">@msg.Timestamp.ToLocalTime().ToString("HH:mm")</span>
+                </div>
+                <div class="message-content">@msg.Text</div>
+            </div>
+        }
+    </div>
+
+    <div class="chat-input">
+        <input @bind="messageInput"
+               @bind:event="oninput"
+               @onkeydown="HandleKeyDown"
+               placeholder="Type in @currentChannel..."
+               disabled="@(!IsConnected)" />
+        <button @onclick="SendMessageAsync" disabled="@(!IsConnected || string.IsNullOrWhiteSpace(messageInput))">
+            Send
+        </button>
+    </div>
+
+    <div class="connection-status @(IsConnected ? "connected" : (hubConnection?.State == HubConnectionState.Reconnecting ? "reconnecting" : "disconnected"))">
+        @if (IsConnected)
+        {
+            <span>Connected to @currentChannel</span>
+        }
+        else if (hubConnection?.State == HubConnectionState.Reconnecting)
+        {
+            <span>Reconnecting...</span>
+        }
+        else
+        {
+            <span>Disconnected</span>
+            <button @onclick="ConnectAsync">Reconnect</button>
+        }
+    </div>
+</div>
+
+@code {
+    private HubConnection? hubConnection;
+    // Store messages per channel
+    private Dictionary<string, List<ChatMessage>> channelMessages = new Dictionary<string, List<ChatMessage>>();
+    // Store unread counts per channel
+    private Dictionary<string, int> unreadMessagesPerChannel = new Dictionary<string, int>();
+
+    private string messageInput = string.Empty;
+    private string currentUser = string.Empty;
+    private bool isScrolledToBottom = true;
+    private bool isMinimized = true; // Start minimized
+    private int unreadMessageCount = 0; // Total unread messages for the badge
+
+    private string currentChannel = "Global Chat"; // Default channel
+    private List<string> availableChannels = new List<string> {
+        "Global Chat", "Paris", "London", "New York", "Athens", "Cairo", "Marrakech"
+    };
+
+    private System.Threading.Timer? inactivityTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var nameClaim = user.FindFirst("name") ?? user.FindFirst(System.Security.Claims.ClaimTypes.Name);
+            currentUser = nameClaim?.Value ?? user.Identity.Name ?? "Authenticated_User";
+        }
+        if (string.IsNullOrEmpty(currentUser))
+        {
+            currentUser = "Guest_" + Guid.NewGuid().ToString().Substring(0, 4);
+        }
+
+        // Initialize dictionaries for all available channels
+        foreach (var channel in availableChannels)
+        {
+            channelMessages[channel] = new List<ChatMessage>();
+            unreadMessagesPerChannel[channel] = 0;
+        }
+
+        await ConnectAsync();
+
+        inactivityTimer = new System.Threading.Timer(_ => InvokeAsync(StateHasChanged), null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+    }
+
+    private async Task ConnectAsync()
+    {
+        if (hubConnection is not null && (hubConnection.State == HubConnectionState.Connected || hubConnection.State == HubConnectionState.Connecting))
+        {
+            Console.WriteLine("ConnectAsync called but already connected or connecting.");
+            return;
+        }
+
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/chathub"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        // ReceiveMessage now includes the channel
+        hubConnection.On<string, string, DateTime, string>("ReceiveMessage", async (user, message, timestamp, receivedChannel) =>
+        {
+            var isCurrentUserMessage = user == currentUser;
+
+            if (!channelMessages.ContainsKey(receivedChannel)) channelMessages[receivedChannel] = new List<ChatMessage>();
+            if (!unreadMessagesPerChannel.ContainsKey(receivedChannel)) unreadMessagesPerChannel[receivedChannel] = 0;
+
+            channelMessages[receivedChannel].Add(new ChatMessage { User = user, Text = message, Timestamp = timestamp, IsCurrentUser = isCurrentUserMessage });
+
+            bool needsUiRefresh = false;
+
+            if (!isCurrentUserMessage) // Only for messages from others
+            {
+                if (isMinimized || currentChannel != receivedChannel)
+                {
+                    unreadMessagesPerChannel[receivedChannel]++;
+                    needsUiRefresh = true; // Badge needs update
+                }
+            }
+
+            await InvokeAsync(async () => // Ensure UI updates are on the correct thread
+            {
+                if (needsUiRefresh)
+                {
+                    UpdateTotalUnreadCount();
+                }
+
+                if (currentChannel == receivedChannel && !isMinimized)
+                {
+                    StateHasChanged(); // Refresh message list for active channel
+                    await ScrollToBottomAsync();
+                }
+                else if (needsUiRefresh) // If only badge or other UI elements need update
+                {
+                    StateHasChanged();
+                }
+            });
+        });
+
+        hubConnection.Reconnecting += (error) =>
+        {
+            Console.WriteLine($"Hub connection is reconnecting... Error: {error?.Message}");
+            InvokeAsync(StateHasChanged); // Update UI to show "Reconnecting..."
+            return Task.CompletedTask;
+        };
+
+        hubConnection.Reconnected += async (connectionId) =>
+        {
+            Console.WriteLine($"Hub reconnected with ConnectionId: {connectionId}. Rejoining channel: {currentChannel}");
+            await JoinSpecificChannel(currentChannel); // Re-join the current channel
+            InvokeAsync(StateHasChanged); // Update UI
+        };
+
+        hubConnection.Closed += async (error) =>
+        {
+            Console.WriteLine($"Hub connection closed. Error: {error?.Message}");
+            // Potentially set a flag to show a "Disconnected, try to reconnect" message
+            await InvokeAsync(StateHasChanged);
+        };
+
+        try
+        {
+            await hubConnection.StartAsync();
+            Console.WriteLine($"Connected to chat hub as: {currentUser}. ConnectionId: {hubConnection.ConnectionId}");
+            await JoinSpecificChannel(currentChannel); // Join the initial channel
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error connecting to hub: {ex.Message}");
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task JoinSpecificChannel(string channelToJoin)
+    {
+        if (hubConnection is not null && IsConnected)
+        {
+            try
+            {
+                await hubConnection.SendAsync("JoinChannel", channelToJoin);
+                Console.WriteLine($"Successfully sent JoinChannel request for {channelToJoin}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error joining channel {channelToJoin}: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task LeaveSpecificChannel(string channelToLeave)
+    {
+        if (hubConnection is not null && IsConnected)
+        {
+            try
+            {
+                await hubConnection.SendAsync("LeaveChannel", channelToLeave);
+                Console.WriteLine($"Successfully sent LeaveChannel request for {channelToLeave}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error leaving channel {channelToLeave}: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task SwitchChannelAsync(string newChannel)
+    {
+        if (hubConnection is not null && IsConnected && currentChannel != newChannel && availableChannels.Contains(newChannel))
+        {
+            await LeaveSpecificChannel(currentChannel);
+            currentChannel = newChannel;
+            await JoinSpecificChannel(currentChannel);
+
+            if (!channelMessages.ContainsKey(currentChannel)) channelMessages[currentChannel] = new List<ChatMessage>();
+            if (!unreadMessagesPerChannel.ContainsKey(currentChannel)) unreadMessagesPerChannel[currentChannel] = 0;
+
+            if (!isMinimized)
+            {
+                unreadMessagesPerChannel[currentChannel] = 0;
+                UpdateTotalUnreadCount();
+            }
+
+            StateHasChanged();
+            if (!isMinimized)
+            {
+                await ScrollToBottomAsync();
+            }
+        }
+    }
+
+    private async Task OnChannelSelected(ChangeEventArgs e)
+    {
+        var newChannel = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(newChannel))
+        {
+            await SwitchChannelAsync(newChannel);
+        }
+    }
+
+    private List<ChatMessage> GetCurrentChannelMessages()
+    {
+        return channelMessages.TryGetValue(currentChannel, out var msgs) ? msgs : new List<ChatMessage>();
+    }
+
+    private void UpdateTotalUnreadCount()
+    {
+        unreadMessageCount = unreadMessagesPerChannel.Values.Sum();
+    }
+
+    private async Task SendMessageAsync()
+    {
+        if (hubConnection is not null && IsConnected && !string.IsNullOrWhiteSpace(messageInput))
+        {
+            try
+            {
+                // Send message to the current channel
+                await hubConnection.SendAsync("SendMessage", messageInput, currentUser, currentChannel);
+                messageInput = string.Empty;
+                // isUserActive = true; // Reset inactivity timer - this was for a different feature, keeping it commented
+                // if (inactivityTimer != null)
+                // {
+                //     inactivityTimer.Change(TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+                // }
+                await InvokeAsync(StateHasChanged); // To clear the input field
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending message to channel {currentChannel}: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SendMessageAsync();
+        }
+    }
+
+    private async Task ToggleMinimizedAsync()
+    {
+        isMinimized = !isMinimized;
+        StateHasChanged(); // Update visibility first
+
+        if (!isMinimized) // Chat is being opened
+        {
+            if (unreadMessagesPerChannel.ContainsKey(currentChannel))
+            {
+                unreadMessagesPerChannel[currentChannel] = 0;
+            }
+            UpdateTotalUnreadCount();
+            await ScrollToBottomAsync(); // Scroll after UI is updated and visible
+        }
+        // No specific action for minimizing, unread counts for other channels accumulate naturally.
+        StateHasChanged(); // Final state change
+    }
+
+    private void HandleScroll(EventArgs args)
+    {
+        // This logic might need JS interop for accuracy if precise "isScrolledToBottom" state is critical
+        isScrolledToBottom = false;
+    }
+
+    private async Task ScrollToBottomAsync()
+    {
+        // Only scroll if the chat is open and assumed to be at the bottom (or forced)
+        // The original isScrolledToBottom check might be too simple.
+        // Forcing scroll on new message/channel switch when open is generally desired.
+        if (!isMinimized)
+        {
+            await Task.Delay(50); // Give time for the UI to update
+            await JSRuntime.InvokeVoidAsync("scrollToBottom", "messagesList");
+            isScrolledToBottom = true; // Assume it's now at bottom
+        }
+    }
+
+    public bool IsConnected => hubConnection?.State == HubConnectionState.Connected;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            if (IsConnected)
+            {
+                await LeaveSpecificChannel(currentChannel); // Attempt to leave current channel gracefully
+            }
+            hubConnection.Reconnecting -= OnHubReconnecting; // Clean up event handlers
+            hubConnection.Reconnected -= OnHubReconnected;
+            hubConnection.Closed -= OnHubClosed;
+            await hubConnection.DisposeAsync();
+        }
+        inactivityTimer?.Dispose();
+    }
+    // Dummy handlers for DisposeAsync cleanup to compile, replace with actual if you add them
+    private Task OnHubReconnecting(Exception? ex) => Task.CompletedTask;
+    private Task OnHubReconnected(string? connectionId) => Task.CompletedTask;
+    private Task OnHubClosed(Exception? ex) => Task.CompletedTask;
+
+
+    private class ChatMessage
+    {
+        public string User { get; set; } = string.Empty;
+        public string Text { get; set; } = string.Empty;
+        public DateTime Timestamp { get; set; }
+        public bool IsCurrentUser { get; set; }
+        // public string Channel { get; set; } // Optional: if you need to store channel on message itself
+    }
+}
+
+<style>
+    /* Positionering af chat i nederste højre hjørne */
+    .chat-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        height: 400px;
+        width: 350px;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        background-color: white;
+        z-index: 999;
+        transition: all 0.3s ease;
+    }
+
+    .chat-button {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: #0d6efd;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        z-index: 999;
+        transition: all 0.3s ease;
+    }
+
+        .chat-button:hover {
+            transform: scale(1.05);
+        }
+
+    .chat-icon {
+        font-size: 24px;
+        color: white;
+    }
+
+    .notification-badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background-color: #dc3545;
+        color: white;
+        border-radius: 50%;
+        width: 22px;
+        height: 22px;
+        font-size: 12px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    .visible {
+        display: flex;
+    }
+
+    .chat-header {
+        background-color: #0d6efd;
+        color: white;
+        padding: 10px 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: move; /* Indikerer at vinduet kan flyttes (selvom vi ikke implementerer denne funktion) */
+    }
+
+    .chat-controls {
+        display: flex;
+        gap: 10px;
+    }
+
+    .minimize-button {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 18px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 25px;
+        height: 25px;
+        padding: 0;
+    }
+
+    .chat-messages {
+        flex-grow: 1;
+        overflow-y: auto;
+        padding: 10px 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        background-color: #f9f9f9;
+    }
+
+    .message-item {
+        max-width: 80%;
+        padding: 8px 12px;
+        border-radius: 15px;
+        margin-bottom: 5px;
+        word-break: break-word;
+    }
+
+    .message-mine {
+        align-self: flex-end;
+        background-color: #d1e7ff;
+        border-bottom-right-radius: 5px;
+    }
+
+    .message-other {
+        align-self: flex-start;
+        background-color: #e9e9e9;
+        border-bottom-left-radius: 5px;
+    }
+
+    .message-info {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 2px;
+        font-size: 0.8rem;
+    }
+
+    .message-user {
+        font-weight: bold;
+    }
+
+    .message-time {
+        color: #666;
+    }
+
+    .chat-input {
+        display: flex;
+        padding: 10px 15px;
+        background-color: white;
+        border-top: 1px solid #eee;
+    }
+
+        .chat-input input {
+            flex-grow: 1;
+            padding: 8px 10px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            margin-right: 10px;
+            outline: none;
+        }
+
+            .chat-input input:focus {
+                border-color: #0d6efd;
+            }
+
+        .chat-input button {
+            padding: 8px 15px;
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+            .chat-input button:disabled {
+                background-color: #cccccc;
+                cursor: not-allowed;
+            }
+
+    .connection-status {
+        padding: 5px 10px;
+        text-align: center;
+        font-size: 0.8rem;
+    }
+
+    .connected {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    .disconnected {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    .channel-selector {
+        padding: 6px 10px; /* Adjusted padding */
+        border-radius: 5px;
+        border: 1px solid #ccc;
+        background-color: white;
+        color: #333; /* Text color for options */
+        margin-right: 10px; /* Spacing from controls */
+        height: 30px; /* Match header elements better */
+        line-height: 1; /* Ensure text is centered vertically */
+        max-width: 180px; /* Prevent it from taking too much space */
+        font-size: 0.9rem;
+    }
+
+    .chat-header {
+        /* Ensure items are vertically centered if select causes height issues */
+        align-items: center;
+    }
+
+    .chat-input input {
+        /* Ensure placeholder is visible if it was too light */
+        color: #555;
+    }
+
+        .chat-input input::placeholder {
+            color: #999;
+            opacity: 1; /* Firefox */
+        }
+
+
+    /* Style for reconnecting state */
+    .reconnecting {
+        background-color: #fff3cd; /* Bootstrap warning yellow */
+        color: #856404;
+    }
+
+    .connection-status.reconnecting button { /* If you add a button for reconnecting state */
+        display: none; /* Hide reconnect button during auto-reconnect attempts */
+    }
+</style>
