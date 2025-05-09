@@ -10,11 +10,17 @@
     @inject NavigationManager Navigation
     @inject GoTorz.Data.GoTorzContext DbContext
     @using System.Globalization
-
 @using Microsoft.AspNetCore.Authorization
 @attribute [StreamRendering]
 @attribute [Authorize]
-
+<style>
+    body {
+        margin: 0;
+        background: linear-gradient(to bottom, #0F52BA 40%, #ffffff 99%);
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }
+</style>
 <h3>Search Hotels</h3>
 
 @if (string.IsNullOrEmpty(AccessToken))

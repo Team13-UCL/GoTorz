@@ -8,7 +8,14 @@
     @using Microsoft.AspNetCore.Authorization
 @attribute [StreamRendering]
 @attribute [Authorize(Roles = "Admin, Sales")]
-
+<style>
+    body {
+        margin: 0;
+        background: linear-gradient(to bottom, #0F52BA 40%, #ffffff 99%);
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }
+</style>
 <PageTitle>Travel Packages</PageTitle>
 
 <div class="container mt-5">
