@@ -14,6 +14,7 @@
 
     @if (IsLoading)
     {
+        <!-- Show a loading spinner while data is being fetched -->
         <div class="text-center my-5">
             <div class="spinner-border text-warning" role="status"></div>
             <p>Loading your bookings...</p>
@@ -21,12 +22,14 @@
     }
     else if (!string.IsNullOrEmpty(ErrorMessage))
     {
+        <!-- Display an error message if something goes wrong -->
         <div class="alert alert-danger">
             <i class="fas fa-exclamation-triangle"></i> @ErrorMessage
         </div>
     }
     else if (UserBookings?.Any() == true)
     {
+        <!-- Display the list of bookings -->
         <div class="list-group">
             @foreach (var booking in UserBookings)
             {
@@ -42,7 +45,8 @@
                                 <i class="fas fa-info-circle"></i>
                                 Status: <span class="badge bg-@GetStatusBadgeColor(booking.Status)">@booking.Status</span>
                             </p>
-                            
+
+                            <!-- Display user details if available -->
                             @if (booking.User != null)
                             {
                                 <p class="mb-1">
@@ -68,6 +72,7 @@
                         </div>
                     </div>
 
+                    <!-- Display package details if available -->
                     @if (booking.Package != null)
                     {
                         <div class="mt-3 p-3 bg-light rounded">
@@ -103,14 +108,10 @@
                                     <p>Check-In Date: @booking.Package.Hotels.CheckInDate.ToString("yyyy-MM-dd")</p>
                                     <p>Check-Out Date: @booking.Package.Hotels.CheckOutDate.ToString("yyyy-MM-dd")</p>
                                     <p>Hotel Price: @($"{booking.Package.Hotels.Price} €")</p>
-
                                     <p><strong>Total Package Price:</strong> @($"{booking.Package.PackagePrice} €")</p>
-                                    
                                 </div>
                             </div>
                         </div>
-                    
-
                     }
                 </div>
             }
@@ -118,6 +119,7 @@
     }
     else
     {
+        <!-- Display a message if no bookings are found -->
         <div class="alert alert-info text-center">
             <i class="fas fa-info-circle fa-2x mb-3"></i>
             <h5>No Bookings Found</h5>
@@ -136,20 +138,19 @@
     {
         try
         {
-            // In a real app, you would filter by logged-in user
-            // For now, we'll just get all bookings
+            // Fetch all bookings with related data
             UserBookings = await DbContext.PackageUser
                 .Include(pu => pu.Package)
-                .ThenInclude(p => p.Plane)
+                    .ThenInclude(p => p.Plane)
                 .Include(pu => pu.Package)
-                .ThenInclude(p => p.ReturnPlane)
+                    .ThenInclude(p => p.ReturnPlane)
                 .Include(pu => pu.Package)
-                .ThenInclude(p => p.Hotels)
+                    .ThenInclude(p => p.Hotels)
                 .Include(pu => pu.User)
                 .OrderByDescending(pu => pu.BookingDate)
                 .ToListAsync();
 
-            // Log cases where User is null
+            // Log missing user information
             foreach (var booking in UserBookings)
             {
                 if (booking.User == null)
@@ -161,21 +162,24 @@
         }
         catch (Exception ex)
         {
+            // Handle errors and log them
             ErrorMessage = $"Error loading bookings: {ex.Message}";
             Logger.LogError(ex, "An error occurred while loading bookings.");
         }
         finally
         {
+            // Hide the loading spinner
             IsLoading = false;
         }
     }
 
+    // Generate a unique booking reference
     private string GetBookingReference(PackageUser booking)
     {
-        // Generate a unique reference using date and IDs
         return $"GT-{booking.BookingDate:yyMMdd}-{booking.PackagePlaneId}-{booking.PackageHotelId}-{booking.ReturnPlaneID}";
     }
 
+    // Map booking status to badge color
     private string GetStatusBadgeColor(string status)
     {
         return status switch
