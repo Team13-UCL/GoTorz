@@ -3,6 +3,8 @@
 @using GoTorz.Components.Shared
 @inherits LayoutComponentBase
 @inject AuthenticationStateProvider auth
+
+
 <nav class="navbar navbar-expand-lg shadow" style="background-color: #1C1C1C; border-radius: 0 0 15px 15px;">
     <div class="container-fluid">
         <a class="navbar-brand fw-bold text-white" href="/">GoTorz</a>
@@ -10,17 +12,95 @@
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
+
             <ul class="navbar-nav me-auto">
-                <li class="nav-item">
+                <Microsoft.AspNetCore.Components.Authorization.CascadingAuthenticationState>
+
+            <AuthorizeView>
+                <NotAuthorized> @*This is the view for the unauthorized users*@
+                @* <li class="nav-item">
                     <NavLink class="nav-link text-white" href="/">Home</NavLink>
-                </li>
-                @*                 <li class="nav-item">
+                </li> *@
+@*                 <li class="nav-item">
                     <NavLink class="nav-link" href="/Register">Register</NavLink>
                 </li> *@
                 <li class="nav-item">
                     <NavLink class="nav-link text-white" href="/Login">Login</NavLink>
                 </li>
+                        </NotAuthorized>
+                    </AuthorizeView>
+
+                @* <li class="nav-item">
+                    <NavLink class="nav-link" href="/SalesPlanePage">Create Package</NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="/BrugTilSenere">BrugTilSenere</NavLink>
+                </li> *@
+                <div class="global-chat-widget-container">
+                    @* Wrap it if you need to style its position *@
+                    <GlobalChatWidget @rendermode="new InteractiveServerRenderMode(prerender: true)" />
+                    @* Eller <Chat @rendermode="new InteractiveServerRenderMode(prerender: true)" /> *@
+                </div>
+                    <AuthorizeView Roles="Admin">
+                        @*Admin view*@
+                        <div class="nav-item px-3 ">
+                            <NavLink class="nav-link text-white" href="SalesPlanePage">
+                                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Create Package
+                            </NavLink>
+                        </div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link text-white" href="CustomerBookings">
+                                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Customer Bookings
+                            </NavLink>
+                        </div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link text-white" href="Packages">
+                                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Packages
+                            </NavLink>
+                        </div>
+                        @*TLDR ADD EVERYTHING IN HERE, ADMIN NEEDS TO BE ABLE TO SEE EVERYTHING AND ANYTHING*@
+                    </AuthorizeView>
+
+
+                    @*This is the View for the Sales department*@
+                    <AuthorizeView Roles="Sales">
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link text-white" href="SalesPlanePage">
+                                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> SalesPlanePage
+                            </NavLink>
+                        </div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link text-white" href="CustomerBookings">
+                                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Customer Bookings
+                            </NavLink>
+                        </div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link text-white" href="Packages">
+                                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Packages
+                            </NavLink>
+                        </div>
+
+                    </AuthorizeView>
+
+                    <AuthorizeView Roles="Customer">
+                        @*This is the view for the average user/DefaultUser*@
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link text-white" href="">
+                                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Destinations
+                            </NavLink>
+                        </div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link text-white" href="/order-history">
+                                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Order History
+                            </NavLink>
+                        </div>
+                        <!--<NavLink class="nav-link" href="PackageHistory">
+                            <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> PackageHistory
+                        </NavLink>-->
+                    </AuthorizeView>
+                </Microsoft.AspNetCore.Components.Authorization.CascadingAuthenticationState>
             </ul>
+
             <CascadingAuthenticationState>
                 <AuthorizeView>
                     <div class="d-flex align-items-center text-white">
@@ -32,20 +112,9 @@
     </div>
 </nav>
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-    <main class="container mt-4">
-        @Body
-    </main>
-</div>
-
-<div class="global-chat-widget-container">
-    @* Wrap it if you need to style its position *@
-    <GlobalChatWidget @rendermode="new InteractiveServerRenderMode(prerender: true)" />
-    @* Eller <Chat @rendermode="new InteractiveServerRenderMode(prerender: true)" /> *@
-</div>
+<main class="container mt-4">
+    @Body
+</main>
 
 <div id="blazor-error-ui">
     An unhandled error has occurred.
@@ -56,6 +125,7 @@
 @code {
     public string email { get; set; } = "";
     public string role { get; set; } = "";
+
     protected override async Task OnInitializedAsync()
     {
         var state = await auth.GetAuthenticationStateAsync();
@@ -67,3 +137,8 @@
         }
     }
 }
+
+
+
+
+
