@@ -11,7 +11,14 @@
 @using Microsoft.AspNetCore.Components
 @rendermode InteractiveServer
 @using System.Globalization
-
+<style>
+    body {
+        margin: 0;
+        background: linear-gradient(to bottom, #0F52BA 40%, #ffffff 99%);
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }
+</style>
 <h3>Select Return Flight</h3>
 
 @if (string.IsNullOrEmpty(AccessToken))
