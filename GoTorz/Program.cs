@@ -12,6 +12,7 @@ using GoTorz.Data;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using GoTorz.Components.Middleware;
 using GoTorz.Services;
+using GoTorz.Hubs;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -71,11 +72,14 @@ builder.Services.AddHttpClient();
 //builder.Services.AddSingleton(new PackageService(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Register AmadeusAuthService
-builder.Services.AddSingleton<AmadeusAuthService>(sp => {
+builder.Services.AddSingleton<AmadeusAuthService>(sp =>
+{
     var httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
     var configuration = sp.GetRequiredService<IConfiguration>();
     return new AmadeusAuthService(httpClient, configuration);
 });
+
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -98,6 +102,8 @@ app.UseAuthorization();
 app.UseStaticFiles();
 app.UseAntiforgery();
 app.UseMiddleware<AuthMiddleware>();
+
+app.MapHub<ChatHub>("/chathub");
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
