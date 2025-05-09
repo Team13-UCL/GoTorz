@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using GoTorz.Model;
-using static GoTorz.Components.Pages.SalesPlanePage;
+using static GoTorz.Components.Pages.SalesAdminPages.SalesPlanePage;
 
 namespace GoTorz.Data
 {

@@ -131,7 +131,7 @@ else
 }
 
 @code {
-	//we get the parameters from the query string and store them in a parameter that the next page can use
+    // These properties will receive values from the query string
     [Parameter]
     [SupplyParameterFromQuery]
     public string DepartureAirport { get; set; }
@@ -150,24 +150,28 @@ else
 
     [Parameter]
     [SupplyParameterFromQuery]
-    public DateTime StartDate { get; set; } // Add StartDate parameter
+    public DateTime StartDate { get; set; } // Departure date of the first flight
 
     [Parameter]
     [SupplyParameterFromQuery]
-    public int PlaneId { get; set; } // Add PlaneId parameter
+    public int PlaneId { get; set; } // ID of the saved departure flight
 
+    // Local fields to manage return flight selection
     private DateTime? ReturnDate = null;
     private string ErrorMessage = "";
     private bool IsLoading = false;
     private string AccessToken = "";
     private List<Flight> ReturnFlightResults = new();
 
+    // Called when the component is initialized
+    // Gets the access token and logs the incoming query parameters
     protected override async Task OnInitializedAsync()
     {
         AccessToken = await AmadeusService.GetAccessTokenAsync();
         Logger.LogInformation($"Initialized with parameters: ArrivalAirport={ArrivalAirport}, DepartureAirport={DepartureAirport}, Carrier={Carrier}, FlightPrice={FlightPrice}, StartDate={StartDate}, PlaneId={PlaneId}");
     }
 
+    // Fetch available return flights using the inverse of the original route
     private async Task FetchReturnFlights()
     {
         IsLoading = true;
@@ -189,9 +193,11 @@ else
                 string returnDateString = ReturnDate.Value.ToString("yyyy-MM-dd");
                 Logger.LogInformation($"Fetching return flights with parameters: Departure={ArrivalAirport}, Arrival={DepartureAirport}, ReturnDate={returnDateString}");
 
+                // Search flights from the original arrival back to the original departure
                 var response = await AmadeusService.SearchFlightsAsync(ArrivalAirport, DepartureAirport, returnDateString);
                 Logger.LogInformation("JSON Response: {response}", response);
 
+                // Parse JSON and extract the flight data
                 var jsonDocument = JsonDocument.Parse(response);
                 var flightData = jsonDocument.RootElement.GetProperty("data").GetRawText();
                 ReturnFlightResults = JsonSerializer.Deserialize<List<Flight>>(flightData);
@@ -214,13 +220,15 @@ else
         }
     }
 
+    // Saves the selected return flight to the database
     private async Task SaveReturnFlightDetails(string departure, string arrival, string carrier, decimal price, DateTime returnDate, int planeId)
     {
         try
         {
+            // Calculate trip duration
             int duration = (returnDate - StartDate).Days;
 
-            // Iterate through all segments to capture layovers
+            // Gather all layovers from return segments
             var layovers = new List<string>();
             foreach (var flight in ReturnFlightResults)
             {
@@ -233,6 +241,7 @@ else
                 }
             }
 
+            // Create and populate a ReturnPlane object
             var returnPlane = new ReturnPlane
                 {
                     DepartureAirport = departure,
@@ -243,12 +252,13 @@ else
                     Duration = duration
                 };
 
+            // Save return flight to the database
             DbContext.ReturnPlane.Add(returnPlane);
             await DbContext.SaveChangesAsync();
 
             Logger.LogInformation("Return flight details saved successfully with layovers: {Layovers}", string.Join(", ", layovers));
 
-            // Navigate to the hotel selection page
+            // Navigate to the hotel selection page with necessary parameters
             Navigation.NavigateTo($"/SalesHotelPage?PlaneId={planeId}&ReturnPlaneID={returnPlane.ReturnPlaneId}&FlightPrice={FlightPrice}&ReturnFlightPrice={price}");
         }
         catch (Exception ex)
@@ -258,12 +268,14 @@ else
         }
     }
 
+    // Called when a user selects a return flight offer
     private void SelectReturnFlight(string departure, string arrival, string carrier, string price)
     {
         if (decimal.TryParse(price, CultureInfo.InvariantCulture, out var parsedPrice))
         {
             if (ReturnDate.HasValue)
             {
+                // Proceed to save selected return flight
                 SaveReturnFlightDetails(departure, arrival, carrier, parsedPrice, ReturnDate.Value, PlaneId);
             }
             else
@@ -276,6 +288,5 @@ else
             ErrorMessage = "Invalid price format.";
         }
     }
-
-    
 }
+
