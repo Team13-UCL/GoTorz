@@ -61,14 +61,16 @@
 
                 <div class="col-md-3">
                     <div class="form-floating">
-                        <input type="date" class="form-control" id="departureDate" @bind="DepartureDate">
+                        <input type="date" class="form-control" id="departureDate" @bind="DepartureDate"
+                        min="@DateTime.Now.ToString("yyyy-MM-dd")">
                         <label for="departureDate">Departure Date</label>
                     </div>
                 </div>
 
                 <div class="col-md-3">
                     <div class="form-floating">
-                        <input type="date" class="form-control" id="returnDate" @bind="ReturnDate">
+                        <input type="date" class="form-control" id="returnDate" @bind="ReturnDate"
+                        min="@DateTime.Now.ToString("yyyy-MM-dd")">
                         <label for="returnDate">Return Date</label>
                     </div>
                 </div>
@@ -119,6 +121,59 @@
     {
         <h3 class="text-center text-white mb-4">Available Travel Packages for "@SearchTerm"</h3>
         <div class="row">
+
+           @foreach (var package in FilteredPackages)
+{
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm h-100">
+            <!-- Hotel image moved inside the card -->
+            <div class="text-center">
+                <img src="@package.Hotels.ImageUrl" 
+     alt="Hotel image"
+     class="card-img-top" 
+     style="height: 200px; object-fit: cover;" />
+            </div>
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">@package.Plane.ArrivalAirport - @package.Hotels.Name</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><i class="fas fa-plane-departure"></i> <strong>From:</strong> @package.Plane.DepartureAirport</p>
+                        <p><i class="fas fa-calendar-alt"></i> <strong>Departure:</strong> @package.Plane.StartDate.ToString("dd/MM/yyyy")</p>
+                        <p><i class="fas fa-calendar-alt"></i> <strong>Return:</strong> @package.ReturnPlane.ReturnDate.ToString("dd/MM/yyyy")</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><i class="fas fa-hotel"></i> <strong>Hotel:</strong> @package.Hotels.Name</p>
+                        <p><i class="fas fa-clock"></i> <strong>Duration:</strong> @package.ReturnPlane.Duration days</p>
+                    </div>
+                </div>
+                <hr />
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="text-success mb-0">@package.PackagePrice?.ToString("N2") €</h4>
+                        <small class="text-muted">per person</small>
+                    </div>
+                    @if (package.IsBooked)
+                    {
+                        <span class="badge bg-danger">Already Booked</span>
+                    }
+                    else
+                    {
+                        <button class="btn btn-warning" @onclick="() => SelectPackage(package)">
+                            <i class="fas fa-shopping-cart"></i> Book Now
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+</div  >
+	}
+    <!--Popular destinations preview-->
+    <h3 class="text-center text-warning mt-5 mb-4">Popular Destinations</h3>
+=======
             @foreach (var package in FilteredPackages)
             {
                 <div class="col-md-6 mb-4">
@@ -178,27 +233,27 @@
             </div>
         }
     </div>
-</div>
+
 
 <div class="city-footer"></div>
 
 @code {
+    // Search and Filter Properties
     private string SearchTerm { get; set; } = "";
-    private DateTime? DepartureDate { get; set; } = DateTime.Now.AddDays(14);
-    private DateTime? ReturnDate { get; set; } = DateTime.Now.AddDays(21);
+    private DateTime? DepartureDate { get; set; } = DateTime.Now;
+    private DateTime? ReturnDate { get; set; } = DateTime.Now.AddDays(14);
     private bool SortByPrice { get; set; } = false;
     private bool SortByDate { get; set; } = false;
+
+    // State Management
     private bool IsLoading { get; set; } = false;
     private bool HasSearched { get; set; } = false;
     private bool ShowLoginErrorModal { get; set; } = false;
     private string ErrorMessage { get; set; } = "";
-    public bool IsBooked { get; set; }
 
-    //Alle vores pakker fra vores database 
+    // Data Collections
     private List<Package> AllPackages { get; set; } = new();
     private List<Package> FilteredPackages { get; set; } = new();
-
-    // liste af samme destinationer som home-siden for at vise dem i en preview
     private List<Destination> PopularDestinations = new()
     {
         new Destination { Name = "Paris", ImageUrl = "https://cdn.pixabay.com/photo/2019/02/21/18/52/paris-4011964_1280.jpg", Price = 299 },
