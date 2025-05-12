@@ -1,0 +1,175 @@
+﻿@page "/dashboard"
+@using GoTorz.Services
+@using GoTorz.Model
+@using Microsoft.AspNetCore.Authorization
+@inject UserService userService
+@inject AmadeusAuthService AmadeusService
+@attribute [Authorize(Roles = "Admin")] // Restrict access to this page to users with the "Admin" role
+@rendermode InteractiveServer
+<style>
+    body {
+        margin: 0;
+        background: linear-gradient(to bottom, #0F52BA 40%, #ffffff 99%);
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        color: white; /* Set default text color to white */
+    }
+
+    h3 {
+        color: white; /* Ensure the heading is also white */
+    }
+
+    table {
+        color: white; /* Ensure table text is white */
+    }
+
+        table th, table td {
+            color: white; /* Ensure table header and cell text are white */
+        }
+
+    .form-select, .btn {
+        color: black; /* Optional: Keep dropdown and button text readable */
+    }
+</style>
+<h3>Admin Dashboard</h3>
+
+<!-- Email Search Input -->
+<div class="mb-3 d-flex" style="max-width: 50%; margin-bottom: 1rem;">
+    <!-- Input field for searching users by email -->
+    <input type="text" @bind="SearchEmail" class="form-control me-2" placeholder="Search by email..." />
+    <!-- Button to trigger the search -->
+    <button class="btn btn-primary" @onclick="PerformSearch">Search</button>
+</div>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th> <!-- Column for user names -->
+            <th>Email</th> <!-- Column for user emails -->
+            <th>Current Role</th> <!-- Column for displaying the current role -->
+            <th>Change Role</th> <!-- Column for selecting a new role -->
+            <th>Action</th> <!-- Column for saving changes -->
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var user in FilteredUsers) // Loop through filtered users
+        {
+            <tr>
+                <td>@user.Name</td> <!-- Display user name -->
+                <td>@user.Email</td> <!-- Display user email -->
+                <td>@user.Role</td> <!-- Display current role -->
+                <td>
+                    <!-- Dropdown to select a new role -->
+                    <select @bind="user.NewRole" class="form-select">
+                        <option value="Admin">Admin</option>
+                        <option value="Sales">Sales</option>
+                        <option value="Customer">Customer</option>
+                    </select>
+                </td>
+                <td>
+                    <!-- Button to save the new role -->
+                    <button class="btn btn-primary me-2" @onclick="() => UpdateUserRole(user)">Save</button>
+                    <!-- Button to delete the user -->
+                    <button class="btn btn-danger" @onclick="() => ConfirmDelete(user)">Delete</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- Confirmation Popup -->
+@if (UserToDelete != null)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" style="color: black;">Confirm Deletion</h5> <!-- Set title text color to black -->
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    <p style="color: black;">Are you sure you want to delete @UserToDelete.Name?</p> <!-- Set body text color to black -->
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    <button class="btn btn-danger" @onclick="() => DeleteUser(UserToDelete)">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
+@code {
+    private List<User> Users = new(); // List to store all users
+    private string SearchEmail = string.Empty; // Input for email search
+    private User? UserToDelete = null; // User selected for deletion
+    private IEnumerable<User> FilteredUsers => Users
+        .Where(user => string.IsNullOrEmpty(SearchEmail) || user.Email.Contains(SearchEmail, StringComparison.OrdinalIgnoreCase));
+    // Filter users based on the search input
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load users from the database when the component initializes
+        Users = await userService.GetAllUsersAsync();
+
+        // Initialize NewRole for each user to match their current role
+        foreach (var user in Users)
+        {
+            user.NewRole = user.Role;
+        }
+    }
+
+    private void PerformSearch()
+    {
+        // Trigger re-evaluation of FilteredUsers to update the displayed list
+        StateHasChanged();
+    }
+
+    private async Task UpdateUserRole(User user)
+    {
+        // Check if the role has changed before updating
+        if (user.Role != user.NewRole)
+        {
+            // Call the service to update the user's role in the database
+            var success = await userService.UpdateUserRoleAsync(user.UserID, user.NewRole);
+            if (success)
+            {
+                user.Role = user.NewRole; // Update the role in the UI
+                // Optionally show a success message
+            }
+            else
+            {
+                // Optionally show an error message
+            }
+        }
+    }
+
+    private void ConfirmDelete(User user)
+    {
+        // Set the user to be deleted and show the confirmation popup
+        UserToDelete = user;
+    }
+
+    private void CancelDelete()
+    {
+        // Clear the user to delete and hide the confirmation popup
+        UserToDelete = null;
+    }
+
+    private async Task DeleteUser(User user)
+    {
+        // Call the service to delete the user from the database
+        var success = await userService.DeleteUserAsync(user.UserID);
+        if (success)
+        {
+            Users.Remove(user); // Remove the user from the list
+            UserToDelete = null; // Hide the confirmation popup
+            StateHasChanged(); // Refresh the UI
+        }
+        else
+        {
+            // Optionally show an error message
+        }
+    }
+}
