@@ -14,44 +14,76 @@
 <style>
     body {
         margin: 0;
-        background: linear-gradient(to bottom, #0F52BA 40%, #ffffff 99%);
+        background: linear-gradient(to bottom, #0F52BA 50%, #ffffff 150%);
         background-repeat: no-repeat;
         background-attachment: fixed;
     }
-</style>
-<h3>Select Return Flight</h3>
 
-@if (string.IsNullOrEmpty(AccessToken))
-{
-    <p>Fetching access token...</p>
-}
-else
-{
-    <div class="container my-5">
+    .flight-card {
+        border-radius: 20px;
+    }
+
+    .section-header {
+        color: #0F52BA;
+        font-weight: bold;
+    }
+
+    .search-btn {
+        background-color: #0F52BA;
+        border: none;
+    }
+
+        .search-btn:hover {
+            background-color: #0d479d;
+        }
+
+    .table thead {
+        background-color: #0F52BA;
+        color: white;
+    }
+
+    .table td {
+        vertical-align: middle;
+    }
+
+    .text-shadow {
+        text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    }
+</style>
+
+<div class="container my-5">
+    <div class="text-center mb-4">
+        <h2 class="section-header"><i class="fas fa-plane"></i> Return Flight Search</h2>
+    </div>
+
+    @if (string.IsNullOrEmpty(AccessToken))
+    {
+        <div class="text-center text-muted">Fetching access token...</div>
+    }
+    else
+    {
         <div class="row justify-content-center">
             <div class="col-lg-6 col-md-8">
-                <div class="card shadow-lg">
+                <div class="card shadow-lg flight-card">
                     <div class="card-body">
-                        <h3 class="text-center mb-4"><i class="fas fa-plane"></i> Return Flight Search</h3>
+                        <h4 class="text-center mb-4 text-primary">Search for Return Flight</h4>
 
-                        <div class="form-group">
-                            <label><i class="fas fa-plane-departure"></i> Outbound Flight: <strong>@DepartureAirport</strong> ➝ <strong>@ArrivalAirport</strong></label>
+                        <div class="form-group mb-3">
+                            <label><i class="fas fa-plane-departure"></i> Outbound: <strong>@DepartureAirport</strong> ➝ <strong>@ArrivalAirport</strong></label>
                         </div>
 
-                        <div class="form-group mt-3">
-                            <label><i class="fas fa-plane-arrival"></i> Return Flight: <strong>@ArrivalAirport</strong> ➝ <strong>@DepartureAirport</strong></label>
+                        <div class="form-group mb-3">
+                            <label><i class="fas fa-plane-arrival"></i> Return: <strong>@ArrivalAirport</strong> ➝ <strong>@DepartureAirport</strong></label>
                         </div>
 
-                        <div class="form-group mt-3">
-                            <label><i class="fas fa-calendar-alt"></i> Return Date:</label>
+                        <div class="form-group mb-4">
+                            <label><i class="fas fa-calendar-alt"></i> Return Date</label>
                             <input type="date" @bind="ReturnDate" class="form-control" />
                         </div>
 
-                        <div class="text-center mt-4">
-                            <button @onclick="FetchReturnFlights" class="btn btn-primary w-100">
-                                <i class="fas fa-search"></i> Search Return Flights
-                            </button>
-                        </div>
+                        <button @onclick="FetchReturnFlights" class="btn search-btn text-white w-100">
+                            <i class="fas fa-search"></i> Search Return Flights
+                        </button>
                     </div>
                 </div>
             </div>
@@ -61,16 +93,16 @@ else
         {
             <div class="text-center mt-4">
                 <div class="spinner-border text-primary" role="status"></div>
-                <p>Searching for return flights...</p>
+                <p class="text-white-outline">Searching for return flights...</p>
             </div>
         }
         else if (ReturnFlightResults != null && ReturnFlightResults.Count > 0)
         {
             <div class="mt-5">
-                <h4 class="text-center"><i class="fas fa-list"></i> Return Flight Results</h4>
+                <h4 class="text-center text-white mb-4"><i class="fas fa-list"></i> Return Flight Results</h4>
                 <div class="table-responsive">
-                    <table class="table table-hover mt-3 shadow-sm">
-                        <thead class="table-dark">
+                    <table class="table table-hover shadow-sm">
+                        <thead>
                             <tr>
                                 <th>Flight ID</th>
                                 <th>Departure</th>
@@ -86,14 +118,13 @@ else
                                 @foreach (var itinerary in flight.Itineraries)
                                 {
                                     <tr>
-                                        <td>@flight.Id</td>
+                                        <td class="text-white-outline">@flight.Id</td>
                                         <td>
                                             @foreach (var segment in itinerary.Segments)
                                             {
                                                 <div>
-                                                    <strong>@segment.Departure.IataCode</strong>
-                                                    <br />
-                                                    <small class="text-muted">@segment.Departure.At.ToString("MMM dd, HH:mm")</small>
+                                                    <strong class="text-white-outline">@segment.Departure.IataCode</strong><br />
+                                                    <small class="text-white-outline">@segment.Departure.At.ToString("MMM dd, HH:mm")</small>
                                                 </div>
                                             }
                                         </td>
@@ -101,19 +132,18 @@ else
                                             @foreach (var segment in itinerary.Segments)
                                             {
                                                 <div>
-                                                    <strong>@segment.Arrival.IataCode</strong>
-                                                    <br />
-                                                    <small class="text-muted">@segment.Arrival.At.ToString("MMM dd, HH:mm")</small>
+                                                    <strong class="text-white-outline">@segment.Arrival.IataCode</strong><br />
+                                                    <small class="text-white-outline">@segment.Arrival.At.ToString("MMM dd, HH:mm")</small>
                                                 </div>
                                             }
                                         </td>
                                         <td>
                                             @foreach (var segment in itinerary.Segments)
                                             {
-                                                <div>@segment.CarrierCode @segment.FlightNumber</div>
+                                                <div class="text-white-outline">@segment.CarrierCode @segment.FlightNumber</div>
                                             }
                                         </td>
-                                        <td><strong>@flight.Price.Currency @flight.Price.Total</strong></td>
+                                        <td><strong class="text-white-outline">@flight.Price.Currency @flight.Price.Total</strong></td>
                                         <td>
                                             <button @onclick="() => SelectReturnFlight(itinerary.Segments.First().Departure.IataCode, itinerary.Segments.Last().Arrival.IataCode, itinerary.Segments.First().CarrierCode + itinerary.Segments.First().FlightNumber, flight.Price.Total)"
                                                     class="btn btn-sm btn-success">
@@ -134,8 +164,8 @@ else
                 <i class="fas fa-exclamation-triangle"></i> @ErrorMessage
             </div>
         }
-    </div>
-}
+    }
+</div>
 
 @code {
     // These properties will receive values from the query string
@@ -296,4 +326,3 @@ else
         }
     }
 }
-
