@@ -48,5 +48,14 @@ namespace GoTorz.Services
             await context.SaveChangesAsync();
             return true;
         }
+
+        public async Task<bool> DeleteUserAsync(int userId)
+        {
+            var user = await context.Users.FindAsync(userId);
+            if (user == null) return false;
+            context.Users.Remove(user);
+            await context.SaveChangesAsync();
+            return true;
+        }
     }
 }

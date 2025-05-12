@@ -68,16 +68,42 @@
                 </td>
                 <td>
                     <!-- Button to save the new role -->
-                    <button class="btn btn-primary" @onclick="() => UpdateUserRole(user)">Save</button>
+                    <button class="btn btn-primary me-2" @onclick="() => UpdateUserRole(user)">Save</button>
+                    <!-- Button to delete the user -->
+                    <button class="btn btn-danger" @onclick="() => ConfirmDelete(user)">Delete</button>
                 </td>
             </tr>
         }
     </tbody>
 </table>
 
+<!-- Confirmation Popup -->
+@if (UserToDelete != null)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" style="color: black;">Confirm Deletion</h5> <!-- Set title text color to black -->
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    <p style="color: black;">Are you sure you want to delete @UserToDelete.Name?</p> <!-- Set body text color to black -->
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    <button class="btn btn-danger" @onclick="() => DeleteUser(UserToDelete)">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
 @code {
     private List<User> Users = new(); // List to store all users
     private string SearchEmail = string.Empty; // Input for email search
+    private User? UserToDelete = null; // User selected for deletion
     private IEnumerable<User> FilteredUsers => Users
         .Where(user => string.IsNullOrEmpty(SearchEmail) || user.Email.Contains(SearchEmail, StringComparison.OrdinalIgnoreCase));
     // Filter users based on the search input
@@ -116,6 +142,34 @@
             {
                 // Optionally show an error message
             }
+        }
+    }
+
+    private void ConfirmDelete(User user)
+    {
+        // Set the user to be deleted and show the confirmation popup
+        UserToDelete = user;
+    }
+
+    private void CancelDelete()
+    {
+        // Clear the user to delete and hide the confirmation popup
+        UserToDelete = null;
+    }
+
+    private async Task DeleteUser(User user)
+    {
+        // Call the service to delete the user from the database
+        var success = await userService.DeleteUserAsync(user.UserID);
+        if (success)
+        {
+            Users.Remove(user); // Remove the user from the list
+            UserToDelete = null; // Hide the confirmation popup
+            StateHasChanged(); // Refresh the UI
+        }
+        else
+        {
+            // Optionally show an error message
         }
     }
 }
