@@ -19,7 +19,7 @@
 <PageTitle>Travel Packages</PageTitle>
 
 <div class="container mt-5">
-    <h1 class="text-center"><i class="fas fa-box"></i> Travel Packages</h1>
+    <h1 class="text-white text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; text-center"><i class="fas fa-box"></i> Travel Packages</h1>
 
     @if (packages != null && packages.Any())
     {
@@ -41,13 +41,13 @@
                     @foreach (var package in packages)
                     {
                         <tr>
-                            <td>@package.PlaneId</td>
-                            <td>@package.HotelId</td>
-                            <td>@package.ReturnPlaneID</td>
-                            <td>@package.Plane.StartDate.ToString("yyyy-MM-dd")</td>
-                            <td>@package.Plane.ArrivalAirport</td>
-                            <td>@package.Plane.DepartureAirport</td>
-                            <td>@($"{package.PackagePrice} €")</td>
+                            <td class="text-white-outline">@package.PlaneId</td>
+                            <td class="text-white-outline">@package.HotelId</td>
+                            <td class="text-white-outline">@package.ReturnPlaneID</td>
+                            <td class="text-white-outline">@package.Plane.StartDate.ToString("yyyy-MM-dd")</td>
+                            <td class="text-white-outline">@package.Plane.ArrivalAirport</td>
+                            <td class="text-white-outline">@package.Plane.DepartureAirport</td>
+                            <td class="text-white-outline">@($"{package.PackagePrice} €")</td>
                             <td>
                                 <a href="@($"packages/edit?planeid={package.PlaneId}")" class="btn btn-sm btn-warning">
                                     <i class="fas fa-edit"></i> Edit
