@@ -13,20 +13,20 @@
 </style>
 <PageTitle>Delete</PageTitle>
 
-<h1>Delete</h1>
+<h1 class="text-white">Delete</h1>
 
-<p>Are you sure you want to delete this?</p>
+<p class="text-white">Are you sure you want to delete this?</p>
 <div>
-    <h2>Package</h2>
+    <h2 class="text-white">Package</h2>
     <hr />
     @if (package is null)
     {
-        <p><em>Loading...</em></p>
+        <p class="text-white"><em>Loading...</em></p>
     }
     else {
         <EditForm method="post" Model="package" OnValidSubmit="DeletePackage" FormName="delete" Enhance>
             <button type="submit" class="btn btn-danger" disabled="@(package is null)">Delete</button> |
-            <a href="/packages">Back to List</a>
+            <a style="color: #0ddade" href="/packages">Back to List</a>
         </EditForm>
     }
 </div>
