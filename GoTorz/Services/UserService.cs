@@ -1,5 +1,6 @@
 ﻿using GoTorz.Data;
 using GoTorz.Model;
+using Microsoft.EntityFrameworkCore;
 
 namespace GoTorz.Services
 {
@@ -32,6 +33,20 @@ namespace GoTorz.Services
         public User? GetUserByEmail(string email)
         {
             return context.Users.FirstOrDefault(u => u.Email == email);
+        }
+        public async Task<List<User>> GetAllUsersAsync()
+        {
+            return await context.Users.ToListAsync();
+        }
+
+        public async Task<bool> UpdateUserRoleAsync(int userId, string newRole)
+        {
+            var user = await context.Users.FindAsync(userId);
+            if (user == null) return false;
+
+            user.Role = newRole;
+            await context.SaveChangesAsync();
+            return true;
         }
     }
 }

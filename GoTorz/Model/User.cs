@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace GoTorz.Model
 {
@@ -13,5 +14,8 @@ namespace GoTorz.Model
         public string Password { get; set; }
 
         public string Role { get; set; }
+       
+        [NotMapped] // This property is not mapped to the database, its for the UI so we dont update role accendtally
+        public string NewRole { get; set; } = string.Empty;
     }
 }
