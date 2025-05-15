@@ -74,12 +74,45 @@
                     @if (booking.Package != null)
                     {
                         <!-- Pakke detaljer -->
-                        <div class="mt-3 p-3 bg-light rounded">
-                            <h6>Trip Details:</h6>
-                            <p>@booking.Package.Plane.DepartureAirport → @booking.Package.Plane.ArrivalAirport</p>
-                            <p>Hotel: @booking.Package.Hotels.Name</p>
-                            <p>Total: @booking.Package.PackagePrice?.ToString("N2") €</p>
-                            <img src="@booking.Package.Hotels.ImageUrl" alt="Hotel Image" class="img-fluid rounded" style="max-width: 500px; max-height: 400px; object-fit: cover;" />
+
+                        <div class="row">
+                            <!-- Flight Details -->
+                            <div class="col-md-6">
+                                <p><strong>Outbound Flight Details:</strong></p>
+                                <p>Carrier: @booking.Package.Plane.CarrierCode</p>
+                                <p>Departure: @booking.Package.Plane.DepartureAirport</p>
+                                <p>Arrival: @booking.Package.Plane.ArrivalAirport</p>
+                                <p>Departure Date: @booking.Package.Plane.StartDate.ToString("yyyy-MM-dd")</p>
+
+                            </div>
+
+                            <!--Return Flight Details-->
+                            <div class="col-md-6">
+                                <p><strong>Return Flight Details</strong></p>
+                                <p>Carrier Code: @booking.Package?.ReturnPlane?.CarrierCode</p>
+                                <p>Departure Airport: @booking.Package?.ReturnPlane?.DepartureAirport</p>
+                                <p>Arrival Airport: @booking.Package?.ReturnPlane?.ArrivalAirport</p>
+                                <p>Return Date: @booking.Package?.ReturnPlane?.ReturnDate.ToString("yyyy-MM-dd")</p>
+                                <p>Duration: @booking.Package?.ReturnPlane?.Duration days</p>
+                            </div>
+
+
+
+                            <!-- Hotel Details -->
+                            <div class="col-md-6">
+                                <p><strong>Hotel Details:</strong></p>
+                                <p>Hotel: @booking.Package.Hotels.Name</p>
+                                <p>Check-In: @booking.Package.Hotels.CheckInDate.ToString("yyyy-MM-dd")</p>
+                                <p>Check-Out: @booking.Package.Hotels.CheckOutDate.ToString("yyyy-MM-dd")</p>
+                                <img src="@booking.Package.Hotels.ImageUrl" alt="Hotel Image"
+                                     class="img-fluid rounded mt-2"
+                                     style="max-width: 300px; max-height: 200px; object-fit: cover;" />
+                            </div>
+                        </div>
+
+                        <!-- Only show total price -->
+                        <div class="mt-3">
+                            <p class="fw-bold">Total Package Price: @booking.Package.PackagePrice?.ToString("N2") €</p>
                         </div>
                     }
                 </div>
