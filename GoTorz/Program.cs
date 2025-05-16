@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
-
+using Serilog.Events;
+using Serilog.Filters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using GoTorz.Data;
@@ -13,7 +14,6 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using GoTorz.Components.Middleware;
 using GoTorz.Services;
 using GoTorz.Hubs;
-
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddUserSecrets<Program>();
@@ -24,37 +24,60 @@ builder.Services.AddDbContextFactory<GoTorzContext>(options =>
 builder.Services.AddDbContextFactory<AuthContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("GoTorzContext") ?? throw new InvalidOperationException("Connection string 'GoTorzContext' not found.")));
 
-
 builder.Services.AddHttpClient();
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("https://test.api.amadeus.com/") });
 
 // login authentication and path ways if the login should fail, or we want to denide access to certain parts
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie( options =>
+    .AddCookie(options =>
+{
+    options.LoginPath = "/login";
+    options.AccessDeniedPath = "/accessdenied";
+
+    options.Events = new CookieAuthenticationEvents
     {
-        options.LoginPath = "/login";
-        options.AccessDeniedPath = "/accessdenied";
-    });
+        OnSignedIn = context =>
+        {
+            var username = context.Principal.Identity?.Name;
+            Log.ForContext("LogType", "Login")
+               .Information("Bruger loggede ind: {Username} på {Time}", username, DateTime.UtcNow);
+            return Task.CompletedTask;
+        },
+
+        OnRedirectToAccessDenied = context =>
+        {
+            var user = context.HttpContext.User.Identity?.Name ?? "Ukendt bruger";
+            Log.ForContext("LogType", "AccessDenied")
+               .Warning("Adgang nægtet for bruger: {User} på {Time}", user, DateTime.UtcNow);
+            context.Response.Redirect(context.RedirectUri);
+            return Task.CompletedTask;
+        }
+    };
+});
+
 
 builder.Services.AddScoped<UserService>();
-
 builder.Services.AddAuthentication();
 
 builder.Services.AddScoped<AmadeusAuthService>();
 builder.Logging.AddConfiguration(builder.Configuration.GetSection("Logging"));
 
 builder.Services.AddScoped<StripePaymentService>();
+
 // Konfigurer Serilog
 Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Debug()
     .WriteTo.Console()  // Logger til konsollen
     .WriteTo.File("Logs/log.txt", rollingInterval: RollingInterval.Day) // Logger til en fil pr. dag
+    .WriteTo.Logger(lc => lc  // Logger kun login-events til en separat fil
+        .Filter.ByIncludingOnly(Matching.WithProperty<string>("LogType", type => type == "Login"))
+        .WriteTo.File("Logs/login.txt", rollingInterval: RollingInterval.Day))
     .CreateLogger();
 
 // Tilføj Serilog som Logger
-//builder.Host.UseSerilog();
+builder.Host.UseSerilog();
 
 builder.Services.AddQuickGridEntityFrameworkAdapter();
-
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 // Add services to the container.
@@ -63,7 +86,6 @@ builder.Services.AddRazorComponents()
 
 // Register HttpClient
 builder.Services.AddHttpClient();
-
 
 //// Register the PackageService with the connection string
 //builder.Services.AddSingleton(new PackageService(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -106,5 +128,3 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
-
-
